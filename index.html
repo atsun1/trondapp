@@ -1,131 +1,96 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TronLink 转账示例</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TronLink 唤起测试</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     button {
-      width: 100%;
-      padding: 12px;
-      font-size: 18px;
-      background: #3498db;
-      color: white;
+      background: #ffcc00;
+      color: black;
       border: none;
-      border-radius: 6px;
+      padding: 16px;
+      font-size: 18px;
+      border-radius: 10px;
+      width: 100%;
+      font-weight: bold;
       cursor: pointer;
-      margin-top: 10px;
     }
-    button:hover {
-      background: #2980b9;
-    }
-    button:disabled {
-      background: #bdc3c7;
-      cursor: not-allowed;
-    }
-    .status {
-      margin-top: 15px;
-      padding: 10px;
-      background: #ecf0f1;
-      border-radius: 4px;
-      font-size: 14px;
-    }
+    .log { margin-top: 20px; padding: 12px; background: #1e1e1e; color: lime; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🚀 TronLink 转账演示</h2>
-    <button id="connectBtn">🔌 连接 TronLink</button>
-    <button id="transferBtn" disabled>💸 转账 TRX</button>
-    <div class="status" id="status">请先连接钱包</div>
+  <div class="card">
+    <h2>📲 TronLink 唤起测试</h2>
+    <p>点击下方按钮，尝试唤起 TronLink 并打开百度。</p>
+    
+    <button onclick="launchTronLink()">🚀 唤起 TronLink</button>
+
+    <div class="log" id="log">[日志] 准备就绪...</div>
   </div>
 
   <script>
-    // 全局变量
-    let tronWeb = null;
-
-    // 检查是否在 TronLink 环境中
-    function isTronLinkAvailable() {
-      return typeof window.tronWeb !== 'undefined';
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.textContent += '\n[LOG] ' + msg;
+      console.log(msg);
     }
 
-    // 连接钱包
-    async function connectWallet() {
-      const statusEl = document.getElementById('status');
-      const connectBtn = document.getElementById('connectBtn');
-      const transferBtn = document.getElementById('transferBtn');
+    function launchTronLink() {
+      log("开始唤起 TronLink...");
 
-      if (!isTronLinkAvailable()) {
-        statusEl.innerText = '❌ 未检测到 TronLink，请在 TronLink 内打开本页面';
-        return;
-      }
+      // 目标：在 TronLink 中打开百度
+      const targetUrl = "https://www.baidu.com";
+      
+      // 构造 dappInfo
+      const dappInfo = {
+        url: targetUrl,
+        action: "connect"
+      };
 
+      // 编码
+      let param;
       try {
-        tronWeb = window.tronWeb;
-        const address = tronWeb.defaultAddress.base58;
-
-        if (!address) {
-          // 请求用户授权
-          await tronWeb.request({ method: 'tron_requestAccounts' });
-          // 刷新地址
-          location.reload();
-        }
-
-        statusEl.innerHTML = `✅ 已连接：<br>${address}`;
-        connectBtn.disabled = true;
-        transferBtn.disabled = false;
-      } catch (error) {
-        console.error('连接失败:', error);
-        statusEl.innerText = '❌ 用户拒绝连接或操作取消';
-      }
-    }
-
-    // 打开 TronLink 转账界面
-    function openTransferPage() {
-      if (!tronWeb) {
-        alert('请先连接钱包');
+        param = btoa(JSON.stringify(dappInfo));
+      } catch (e) {
+        log("编码失败: " + e.message);
         return;
       }
 
-      const address = tronWeb.defaultAddress.base58;
-      // 构造 TronLink 转账 URL（官方支持）
-      const transferUrl = `tronlink://transfer?to=&amount=&token=trx&from=${address}`;
+      // 构造深度链接
+      const tronLinkUrl = `tronlink://navigate/DApp?param=${encodeURIComponent(param)}`;
+      log("深度链接: " + tronLinkUrl);
 
-      // 尝试唤起 TronLink App 内转账
-      window.location.href = transferUrl;
+      // ===== 关键：使用 iframe + window.location 双保险 =====
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = tronLinkUrl;
+      document.body.appendChild(iframe);
 
-      // 如果失败（比如在浏览器中），可降级为跳转网页版
+      // 同时尝试 window.location（部分浏览器需要）
+      setTimeout(() => {
+        window.location.href = tronLinkUrl;
+      }, 100);
+
+      // 清理 iframe
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+
+      // ===== Fallback：2秒后若未跳转，提示用户 =====
       setTimeout(() => {
         if (!document.hidden) {
-          // 可选：跳转到 Tronscan 转账页（需手动输入）
-          // window.open(`https://tronscan.org/#/address/${address}/transfer`, '_blank');
+          log("⚠️ 未检测到跳转，请检查：");
+          log("1. 是否在手机上打开？");
+          log("2. 是否已安装 TronLink？");
+          log("3. 是否使用 HTTPS 页面？");
+          
+          alert("未能唤起 TronLink！\n\n请确认：\n• 已安装最新版 TronLink\n• 在手机浏览器中打开此页面\n• 页面地址是 HTTPS 开头");
         }
-      }, 1000);
+      }, 2500);
     }
-
-    // 绑定事件
-    document.getElementById('connectBtn').onclick = connectWallet;
-    document.getElementById('transferBtn').onclick = openTransferPage;
-
-    // 页面加载时自动尝试连接（可选）
-    window.addEventListener('load', () => {
-      if (isTronLinkAvailable() && window.tronWeb.defaultAddress.base58) {
-        document.getElementById('connectBtn').click();
-      }
-    });
   </script>
 </body>
 </html>
