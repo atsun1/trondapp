@@ -1,95 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TronLink 唤起测试</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    button {
-      background: #ffcc00;
-      color: black;
-      border: none;
-      padding: 16px;
-      font-size: 18px;
-      border-radius: 10px;
-      width: 100%;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .log { margin-top: 20px; padding: 12px; background: #1e1e1e; color: lime; font-size: 14px; }
-  </style>
+  <meta charset="utf-8">
+  <title>TronLink 转账</title>
 </head>
-<body>
-  <div class="card">
-    <h2>📲 TronLink 唤起测试</h2>
-    <p>点击下方按钮，尝试唤起 TronLink 并打开百度。</p>
-    
-    <button onclick="launchTronLink()">🚀 唤起 TronLink</button>
-
-    <div class="log" id="log">[日志] 准备就绪...</div>
-  </div>
+<body style="padding:20px; font-family:sans-serif;">
+  <h2>💰 TronLink 转账测试</h2>
 
   <script>
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.textContent += '\n[LOG] ' + msg;
-      console.log(msg);
-    }
-
-    function launchTronLink() {
-      log("开始唤起 TronLink...");
-
-      // 目标：在 TronLink 中打开百度
-      const targetUrl = "https://www.baidu.com";
-      
-      // 构造 dappInfo
-      const dappInfo = {
-        url: targetUrl,
-        action: "connect"
-      };
-
-      // 编码
-      let param;
-      try {
-        param = btoa(JSON.stringify(dappInfo));
-      } catch (e) {
-        log("编码失败: " + e.message);
-        return;
-      }
-
-      // 构造深度链接
-      const tronLinkUrl = `tronlink://navigate/DApp?param=${encodeURIComponent(param)}`;
-      log("深度链接: " + tronLinkUrl);
-
-      // ===== 关键：使用 iframe + window.location 双保险 =====
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = tronLinkUrl;
-      document.body.appendChild(iframe);
-
-      // 同时尝试 window.location（部分浏览器需要）
-      setTimeout(() => {
-        window.location.href = tronLinkUrl;
-      }, 100);
-
-      // 清理 iframe
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-
-      // ===== Fallback：2秒后若未跳转，提示用户 =====
-      setTimeout(() => {
-        if (!document.hidden) {
-          log("⚠️ 未检测到跳转，请检查：");
-          log("1. 是否在手机上打开？");
-          log("2. 是否已安装 TronLink？");
-          log("3. 是否使用 HTTPS 页面？");
-          
-          alert("未能唤起 TronLink！\n\n请确认：\n• 已安装最新版 TronLink\n• 在手机浏览器中打开此页面\n• 页面地址是 HTTPS 开头");
-        }
-      }, 2500);
+    if (window.tronWeb) {
+      document.write(`
+        <p>✅ 检测到 TronLink，<a href="tronlink://transfer?token=trx">点击此处进入转账</a></p>
+      `);
+    } else {
+      document.write(`
+        <p>📱 请在 TronLink App 内打开本页面</p>
+        <p>操作步骤：</p>
+        <ol>
+          <li>打开 TronLink</li>
+          <li>点击「浏览器」</li>
+          <li>输入本页面 HTTPS 链接</li>
+        </ol>
+      `);
     }
   </script>
 </body>
