@@ -2,181 +2,1367 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>转账1 TRX（波宝Pro/Nile测试网兼容版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TRON 转账 DApp - iPhone 专用</title>
+    
+    <!-- iOS 元标签 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- iOS 图标 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%231b9cfc'/></svg>">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        .container { max-width: 500px; margin: 30px auto; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
-        h2 { text-align: center; margin-bottom: 20px; color: #333; }
-        .btn {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        :root {
+            --primary-color: #1b9cfc;
+            --success-color: #4cd137;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --dark-color: #1e272e;
+            --light-color: #f5f6fa;
+            --border-color: #dfe4ea;
+            --text-color: #2f3640;
+            --text-secondary: #718093;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --safe-area-inset-top: env(safe-area-inset-top, 20px);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding: 0;
+            margin: 0;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+        
+        /* iOS 安全区域适配 */
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+        }
+        
+        /* iOS 状态栏区域 */
+        .status-bar {
+            height: 44px;
+            background: rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .status-bar .time {
+            font-weight: 600;
+            color: white;
+            font-size: 15px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0c7bb8 100%);
+            color: white;
+            padding: 20px 20px 30px;
+            text-align: center;
+            border-radius: 0 0 30px 30px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='white' stroke-width='1' stroke-opacity='0.1'/%3E%3C/svg%3E");
+            opacity: 0.1;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+            position: relative;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .form-control {
             width: 100%;
             padding: 16px;
-            margin: 10px 0;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: var(--light-color);
+            -webkit-appearance: none;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(27, 156, 252, 0.1);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 24px;
             border: none;
-            border-radius: 6px;
-            font-size: 18px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 10px;
+            width: 100%;
+            -webkit-appearance: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:active::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0c7bb8 100%);
             color: white;
         }
-        .call-btn { background: #6c757d; cursor: not-allowed; }
-        .transfer-btn { background: #28a745; display: none; }
-        .manual-btn { background: #007bff; }
-        .tip {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 14px;
+        
+        .btn-primary:active {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(27, 156, 252, 0.3);
         }
-        .info-tip { background: #d1ecf1; color: #0c5460; }
-        #log {
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #2e9c1a 100%);
+            color: white;
+        }
+        
+        .btn-success:active {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(76, 209, 55, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d68910 100%);
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .btn-icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .balance-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .balance-amount {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), #0c7bb8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        
+        .balance-unit {
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-top: 5px;
+        }
+        
+        .address-display {
+            background: var(--light-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-connected {
+            background: rgba(76, 209, 55, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-disconnected {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .transaction-details {
+            background: var(--light-color);
+            border-radius: 10px;
+            padding: 15px;
             margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #eee;
-            min-height: 200px;
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .detail-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-all;
+        }
+        
+        .ios-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .ios-modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            animation: modalSlideUp 0.3s ease;
+        }
+        
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .ios-modal-header {
+            padding: 25px 20px 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .ios-modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .ios-modal-body {
+            padding: 0 20px 20px;
+        }
+        
+        .ios-modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ios-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            border-radius: 15px;
+            background: var(--light-color);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 20px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #2e9c1a 100%);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
+        }
+        
+        .notification.info {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0c7bb8 100%);
+        }
+        
+        .notification.warning {
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d68910 100%);
+        }
+        
+        .notification-icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .guide-card {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .guide-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--warning-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .guide-steps {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .guide-step {
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+        }
+        
+        .guide-step::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--warning-color);
+            font-weight: bold;
+        }
+        
+        .deep-link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d68910 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            background: var(--light-color);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+        
+        /* iOS 特定样式 */
+        @supports (-webkit-touch-callout: none) {
+            .btn {
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            input, textarea {
+                font-size: 16px; /* 防止 iOS 缩放 */
+            }
+            
+            .form-control {
+                padding: 12px 16px; /* iOS 输入框优化 */
+            }
+        }
+        
+        /* 暗色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --dark-color: #f5f6fa;
+                --light-color: #1e272e;
+                --border-color: #2d3436;
+                --text-color: #f5f6fa;
+                --text-secondary: #a4b0be;
+            }
+            
+            .card {
+                background: #2d3436;
+            }
+            
+            .form-control {
+                background: #353b48;
+                border-color: #2d3436;
+                color: var(--text-color);
+            }
+            
+            .address-display {
+                background: #353b48;
+            }
+            
+            .transaction-details {
+                background: #353b48;
+            }
+        }
+        
+        /* iPhone 刘海屏适配 */
+        @media only screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3),
+               only screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3),
+               only screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) {
+            .container {
+                padding-top: calc(var(--safe-area-inset-top) + 20px);
+            }
         }
     </style>
+    
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <h2>转账1 TRX到指定地址（Nile测试网）</h2>
-        
-        <div class="info-tip">
-            🎯 目标地址：<br>
-            <code>TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3</code>
+        <!-- 状态栏模拟 -->
+        <div class="status-bar">
+            <div class="time" id="currentTime">12:00</div>
         </div>
-
-        <!-- 禁用唤起按钮（模拟器不支持） -->
-        <button class="btn call-btn">唤起TronLink钱包（雷电模拟器不支持）</button>
-        <!-- 转账按钮（连接钱包后显示） -->
-        <button class="btn transfer-btn" id="transferBtn" onclick="transfer1TRX()">发起1 TRX转账</button>
-
-        <!-- 调试日志区 -->
-        <div id="log">[系统] 页面加载完成，适配波宝Pro环境...</div>
+        
+        <!-- 头部 -->
+        <div class="header">
+            <h1>TRON 转账 DApp</h1>
+            <p>iPhone 专用 - 专为 iOS 优化</p>
+        </div>
+        
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <!-- 连接状态 -->
+            <div class="card">
+                <h3 class="card-title">
+                    <i class="fas fa-plug"></i>钱包连接状态
+                </h3>
+                <div class="form-group">
+                    <div id="connectionStatus" class="status-badge status-disconnected">未连接</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">钱包地址</label>
+                    <div id="walletAddress" class="address-display">点击下方按钮连接钱包</div>
+                </div>
+                <button id="connectBtn" class="btn btn-primary">
+                    <i class="fas fa-wallet btn-icon"></i>连接 TronLink
+                </button>
+                <button id="disconnectBtn" class="btn btn-danger" style="margin-top: 10px; display: none;">
+                    <i class="fas fa-power-off btn-icon"></i>断开连接
+                </button>
+            </div>
+            
+            <!-- 账户余额 -->
+            <div class="card">
+                <h3 class="card-title">
+                    <i class="fas fa-coins"></i>账户余额
+                </h3>
+                <div class="balance-display">
+                    <div id="balanceAmount" class="balance-amount">0.00</div>
+                    <div class="balance-unit">TRX</div>
+                </div>
+                <button id="refreshBalanceBtn" class="btn">
+                    <i class="fas fa-sync-alt btn-icon"></i>刷新余额
+                </button>
+            </div>
+            
+            <!-- 转账功能 -->
+            <div class="card">
+                <h3 class="card-title">
+                    <i class="fas fa-exchange-alt"></i>转账功能
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">收款地址 (To)</label>
+                    <input type="text" id="toAddress" class="form-control" 
+                           placeholder="输入 TRON 地址" 
+                           value="TJceZJwWdyqnCh5BTXABDBJM2PRh6SMB3E"
+                           readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">转账金额 (TRX)</label>
+                    <input type="number" id="amount" class="form-control" 
+                           placeholder="输入金额" 
+                           value="1" 
+                           min="0.1" 
+                           max="1000" 
+                           step="0.1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">备注 (可选)</label>
+                    <input type="text" id="memo" class="form-control" 
+                           placeholder="转账备注信息"
+                           value="iPhone DApp 转账测试">
+                </div>
+                <button id="transferBtn" class="btn btn-success" disabled>
+                    <i class="fas fa-paper-plane btn-icon"></i>发起转账
+                </button>
+            </div>
+            
+            <!-- 安装指南 -->
+            <div class="guide-card" id="installGuide" style="display: none;">
+                <h4 class="guide-title">
+                    <i class="fas fa-exclamation-circle"></i>安装指南
+                </h4>
+                <p style="margin-bottom: 15px; color: var(--text-secondary);">未检测到 TronLink 钱包，请按以下步骤操作：</p>
+                <ol class="guide-steps">
+                    <li class="guide-step">在 App Store 下载安装 TronLink 钱包</li>
+                    <li class="guide-step">打开 TronLink，创建或导入钱包</li>
+                    <li class="guide-step">切换到 Nile 测试网络（获取测试币）</li>
+                    <li class="guide-step">返回此页面，刷新后连接钱包</li>
+                </ol>
+                <a href="https://apps.apple.com/app/tronlink-wallet/id1448019511" target="_blank" class="deep-link-btn">
+                    <i class="fab fa-apple"></i>前往 App Store
+                </a>
+                <button id="openTronLinkBtn" class="btn btn-warning" style="margin-top: 10px;">
+                    <i class="fas fa-external-link-alt"></i>尝试唤起 TronLink
+                </button>
+            </div>
+            
+            <!-- 交易记录 -->
+            <div class="card">
+                <h3 class="card-title">
+                    <i class="fas fa-history"></i>交易记录
+                </h3>
+                <div id="transactionHistory">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                        <i class="fas fa-exchange-alt" style="font-size: 40px; margin-bottom: 10px; opacity: 0.3;"></i>
+                        <p>暂无交易记录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
+    
+    <!-- 交易确认模态框 -->
+    <div id="confirmModal" class="ios-modal">
+        <div class="ios-modal-content">
+            <div class="ios-modal-header">
+                <h3 class="ios-modal-title">确认转账</h3>
+                <button class="ios-modal-close">&times;</button>
+            </div>
+            <div class="ios-modal-body">
+                <div class="transaction-details">
+                    <div class="detail-item">
+                        <span class="detail-label">收款地址</span>
+                        <span id="confirmToAddress" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">转账金额</span>
+                        <span id="confirmAmount" class="detail-value" style="color: var(--success-color); font-size: 20px;">0 TRX</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">网络费用</span>
+                        <span id="confirmFee" class="detail-value">约 0.1 TRX</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">备注</span>
+                        <span id="confirmMemo" class="detail-value">无</span>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; color: var(--text-secondary); font-size: 14px; text-align: center;">
+                    点击确认后，将唤起 TronLink 钱包进行交易签名
+                </p>
+            </div>
+            <div class="ios-modal-footer">
+                <button id="cancelBtn" class="btn" style="flex: 1;">取消</button>
+                <button id="confirmTransferBtn" class="btn btn-success" style="flex: 2;">确认转账</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知 -->
+    <div id="notification" class="notification">
+        <i id="notificationIcon" class="fas fa-info-circle notification-icon"></i>
+        <span id="notificationMessage">通知消息</span>
+    </div>
+    
     <script>
-        // ========== 核心配置 ==========
-        const LOCAL_IP = "192.168.1.100"; // 替换为你的局域网IP
-        const LOCAL_PORT = 8080;
-        const DAPP_URL = `http://${LOCAL_IP}:${LOCAL_PORT}/tron-transfer-1trx.html`;
-        const TARGET_ADDRESS = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
-        const TRANSFER_AMOUNT = 1;
-        const NILE_CHAIN_ID = "4";
-
-        let tronWeb = null;
-
-        // ========== 工具函数 ==========
-        function log(msg) {
-            const logEl = document.getElementById("log");
-            const time = new Date().toLocaleTimeString();
-            const logMsg = `[${time}] ${msg}`;
-            logEl.innerHTML += logMsg + "\n";
-            logEl.scrollTop = logEl.scrollHeight;
-            console.log(logMsg);
-            if (msg.includes("❌") || msg.includes("Error")) {
-                alert(`【报错】${msg}`);
-            }
-        }
-
-        // ========== 修复：兼容波宝Pro的环境检测 ==========
-        function checkTronLinkEnv() {
-            if (!window.tronWeb) {
-                log("❌ 未检测到TronLink/波宝Pro环境！");
-                alert("请在波宝Pro内置DApp浏览器中打开！");
-                return false;
-            }
-            // 不检测request方法，只检测核心转账API
-            if (!window.tronWeb.trx || !window.tronWeb.trx.sendTransaction) {
-                log("⚠️ 波宝Pro兼容模式启动");
-                alert("波宝Pro兼容模式，可正常转账！");
-            }
-            log("✅ 检测到波宝Pro环境");
-            return true;
-        }
-
-        // ========== 修复：兼容波宝Pro的钱包连接 ==========
-        async function connectWallet() {
-            if (!checkTronLinkEnv()) return;
-
-            try {
-                tronWeb = window.tronWeb;
+        class TronLinkIOSDApp {
+            constructor() {
+                this.provider = null;
+                this.address = null;
+                this.balance = 0;
+                this.network = 'nile'; // 默认 Nile 测试网
+                this.transactions = [];
+                this.isConnected = false;
+                this.isIOS = this.detectIOS();
+                this.isInTronLink = false;
                 
-                // 兼容波宝Pro：优先尝试新版API，失败则直接获取地址
-                let address = null;
+                this.init();
+            }
+            
+            init() {
+                this.bindEvents();
+                this.updateTime();
+                this.checkTronLink();
+                this.loadFromLocalStorage();
+                
+                // 页面可见性变化时重新检测
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        setTimeout(() => this.checkTronLink(), 500);
+                    }
+                });
+            }
+            
+            detectIOS() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            }
+            
+            bindEvents() {
+                // 按钮事件
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('disconnectBtn').addEventListener('click', () => this.disconnect());
+                document.getElementById('refreshBalanceBtn').addEventListener('click', () => this.getBalance());
+                document.getElementById('transferBtn').addEventListener('click', () => this.showConfirmModal());
+                document.getElementById('openTronLinkBtn').addEventListener('click', () => this.openTronLink());
+                
+                // 模态框事件
+                document.getElementById('confirmTransferBtn').addEventListener('click', () => this.sendTransaction());
+                document.getElementById('cancelBtn').addEventListener('click', () => this.hideModal());
+                document.querySelector('.ios-modal-close').addEventListener('click', () => this.hideModal());
+                document.getElementById('confirmModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'confirmModal') this.hideModal();
+                });
+                
+                // 输入框事件
+                document.getElementById('amount').addEventListener('input', () => this.validateAmount());
+            }
+            
+            updateTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+                
+                // 每分钟更新一次
+                setTimeout(() => this.updateTime(), 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
+            }
+            
+            checkTronLink() {
+                console.log('检查 TronLink 注入...');
+                
+                // iOS 中 TronLink 可能注入的对象
+                const possibleProviders = [
+                    'tronWeb',
+                    'tronLink',
+                    'tron',
+                    '__tronWeb'
+                ];
+                
+                let detectionLog = '';
+                
+                for (const providerName of possibleProviders) {
+                    if (window[providerName]) {
+                        detectionLog += `✅ 检测到 window.${providerName}\n`;
+                        this.provider = window[providerName];
+                        this.isInTronLink = true;
+                        
+                        // 检查是否已有连接
+                        if (this.provider.defaultAddress && this.provider.defaultAddress.base58) {
+                            this.address = this.provider.defaultAddress.base58;
+                            this.isConnected = true;
+                            this.updateUI();
+                            this.getBalance();
+                        }
+                        
+                        // 隐藏安装指南
+                        document.getElementById('installGuide').style.display = 'none';
+                        break;
+                    } else {
+                        detectionLog += `❌ 未检测到 window.${providerName}\n`;
+                    }
+                }
+                
+                if (!this.provider) {
+                    console.log('未检测到 TronLink，显示安装指南');
+                    document.getElementById('installGuide').style.display = 'block';
+                    this.isInTronLink = false;
+                }
+                
+                console.log(detectionLog);
+                return this.provider;
+            }
+            
+            async connectWallet() {
                 try {
-                    const accounts = await tronWeb.request({ 
-                        method: 'tron_requestAccounts',
-                        params: [] 
+                    this.showNotification('正在连接钱包...', 'info');
+                    
+                    if (!this.provider) {
+                        this.checkTronLink();
+                        if (!this.provider) {
+                            throw new Error('未检测到 TronLink 钱包，请在 TronLink 钱包内打开此页面');
+                        }
+                    }
+                    
+                    // iOS TronLink 通常已自动连接
+                    if (this.provider.defaultAddress && this.provider.defaultAddress.base58) {
+                        this.address = this.provider.defaultAddress.base58;
+                        this.isConnected = true;
+                    } 
+                    // 尝试请求账户访问
+                    else if (this.provider.request) {
+                        const accounts = await this.provider.request({ 
+                            method: 'tron_requestAccounts' 
+                        });
+                        
+                        if (accounts && accounts.length > 0) {
+                            this.address = accounts[0];
+                            this.isConnected = true;
+                        } else {
+                            throw new Error('用户拒绝了连接请求');
+                        }
+                    } 
+                    // 旧版 iOS TronLink
+                    else if (this.provider.getAccount) {
+                        const account = await this.provider.getAccount();
+                        if (account && account.address) {
+                            this.address = account.address;
+                            this.isConnected = true;
+                        } else {
+                            throw new Error('无法获取账户信息');
+                        }
+                    } else {
+                        throw new Error('不支持的 TronLink 版本');
+                    }
+                    
+                    // 更新UI
+                    this.updateUI();
+                    
+                    // 获取余额
+                    await this.getBalance();
+                    
+                    // 保存状态
+                    this.saveToLocalStorage();
+                    
+                    this.showNotification('钱包连接成功!', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    
+                    if (error.code === 4001 || error.message.includes('rejected')) {
+                        this.showNotification('用户拒绝了连接请求', 'warning');
+                    } else if (error.message.includes('not install') || error.message.includes('未检测到')) {
+                        this.showNotification('请在 TronLink 钱包内打开此页面', 'warning');
+                    } else {
+                        this.showNotification(`连接失败: ${error.message}`, 'error');
+                    }
+                    return false;
+                }
+            }
+            
+            disconnect() {
+                this.isConnected = false;
+                this.address = null;
+                this.balance = 0;
+                
+                // 更新UI
+                document.getElementById('connectionStatus').textContent = '未连接';
+                document.getElementById('connectionStatus').className = 'status-badge status-disconnected';
+                document.getElementById('walletAddress').textContent = '点击下方按钮连接钱包';
+                document.getElementById('balanceAmount').textContent = '0.00';
+                document.getElementById('connectBtn').style.display = 'block';
+                document.getElementById('disconnectBtn').style.display = 'none';
+                document.getElementById('transferBtn').disabled = true;
+                
+                // 清除本地存储
+                localStorage.removeItem('tron_address');
+                localStorage.removeItem('tron_transactions');
+                
+                this.showNotification('已断开钱包连接', 'info');
+            }
+            
+            async getBalance() {
+                if (!this.address) return;
+                
+                try {
+                    this.showNotification('正在查询余额...', 'info');
+                    
+                    let balance = 0;
+                    
+                    if (this.provider.trx && this.provider.trx.getBalance) {
+                        const balanceSun = await this.provider.trx.getBalance(this.address);
+                        balance = this.provider.fromSun(balanceSun);
+                    } else if (this.provider.getBalance) {
+                        const balanceSun = await this.provider.getBalance(this.address);
+                        balance = balanceSun / 1000000; // SUN 转 TRX
+                    } else {
+                        // 尝试通过 API 查询
+                        balance = await this.getBalanceViaAPI();
+                    }
+                    
+                    this.balance = parseFloat(balance.toFixed(2));
+                    document.getElementById('balanceAmount').textContent = this.balance.toFixed(2);
+                    
+                    this.showNotification(`余额: ${this.balance.toFixed(2)} TRX`, 'success');
+                } catch (error) {
+                    console.error('获取余额失败:', error);
+                    this.showNotification('获取余额失败，请检查网络', 'error');
+                }
+            }
+            
+            async getBalanceViaAPI() {
+                try {
+                    if (!this.address) return 0;
+                    
+                    const response = await fetch(`https://api.nileex.io/wallet/getaccount?address=${this.address}`);
+                    const data = await response.json();
+                    
+                    if (data.balance) {
+                        return data.balance / 1000000; // SUN 转 TRX
+                    }
+                    return 0;
+                } catch (error) {
+                    console.error('API 查询余额失败:', error);
+                    return 0;
+                }
+            }
+            
+            validateAmount() {
+                const amountInput = document.getElementById('amount');
+                const amount = parseFloat(amountInput.value);
+                
+                if (amount > this.balance) {
+                    amountInput.style.borderColor = 'var(--danger-color)';
+                    this.showNotification('余额不足', 'warning');
+                    return false;
+                } else {
+                    amountInput.style.borderColor = '';
+                    return true;
+                }
+            }
+            
+            showConfirmModal() {
+                if (!this.validateAmount()) return;
+                
+                const toAddress = document.getElementById('toAddress').value;
+                const amount = document.getElementById('amount').value;
+                const memo = document.getElementById('memo').value;
+                
+                if (!toAddress || !toAddress.startsWith('T')) {
+                    this.showNotification('请输入有效的 TRON 地址', 'error');
+                    return;
+                }
+                
+                if (!amount || parseFloat(amount) <= 0) {
+                    this.showNotification('请输入有效的金额', 'error');
+                    return;
+                }
+                
+                document.getElementById('confirmToAddress').textContent = toAddress.substring(0, 8) + '...' + toAddress.substring(toAddress.length - 6);
+                document.getElementById('confirmAmount').textContent = amount + ' TRX';
+                document.getElementById('confirmMemo').textContent = memo || '无';
+                
+                document.getElementById('confirmModal').style.display = 'flex';
+            }
+            
+            hideModal() {
+                document.getElementById('confirmModal').style.display = 'none';
+            }
+            
+            async sendTransaction() {
+                try {
+                    this.hideModal();
+                    this.showNotification('正在准备交易...', 'info');
+                    
+                    const toAddress = document.getElementById('toAddress').value;
+                    const amount = parseFloat(document.getElementById('amount').value);
+                    const memo = document.getElementById('memo').value;
+                    
+                    if (!this.provider || !this.address) {
+                        throw new Error('钱包未连接');
+                    }
+                    
+                    // 检查余额
+                    if (amount > this.balance) {
+                        throw new Error('余额不足');
+                    }
+                    
+                    // 创建交易对象
+                    let transaction;
+                    const amountSun = this.provider.toSun ? this.provider.toSun(amount) : amount * 1000000;
+                    
+                    this.showNotification('正在创建交易...', 'info');
+                    
+                    if (this.provider.transactionBuilder && this.provider.transactionBuilder.sendTrx) {
+                        // 使用 transactionBuilder
+                        transaction = await this.provider.transactionBuilder.sendTrx(
+                            toAddress,
+                            amountSun,
+                            this.address
+                        );
+                    } else if (this.provider.trx && this.provider.trx.sendTransaction) {
+                        // 使用 trx.sendTransaction
+                        transaction = await this.provider.trx.sendTransaction(
+                            toAddress,
+                            amountSun
+                        );
+                    } else {
+                        throw new Error('不支持的交易方法');
+                    }
+                    
+                    // 添加备注
+                    if (memo && transaction.raw_data && transaction.raw_data.contract) {
+                        transaction.raw_data.contract[0].parameter.value.data = this.stringToHex(memo);
+                    }
+                    
+                    this.showNotification('请确认 TronLink 弹窗...', 'info');
+                    
+                    // 签名并发送交易
+                    let result;
+                    
+                    if (this.provider.trx && this.provider.trx.sign) {
+                        // 签名交易
+                        const signedTx = await this.provider.trx.sign(transaction);
+                        
+                        // 发送交易
+                        result = await this.provider.trx.sendRawTransaction(signedTx);
+                    } else if (this.provider.request) {
+                        // 通过 TronLink 直接发送
+                        result = await this.provider.request({
+                            method: 'tron_sendTransaction',
+                            params: [transaction]
+                        });
+                    } else {
+                        throw new Error('不支持的交易签名方法');
+                    }
+                    
+                    if (result && (result.result || result.transaction || result.txid)) {
+                        const txid = result.txid || result.transaction?.txID;
+                        
+                        this.showNotification(`交易已发送!`, 'success');
+                        
+                        // 添加到交易历史
+                        this.addTransaction({
+                            txid: txid,
+                            to: toAddress,
+                            amount: amount,
+                            memo: memo,
+                            timestamp: Date.now(),
+                            status: 'pending'
+                        });
+                        
+                        // 更新余额
+                        setTimeout(() => this.getBalance(), 3000);
+                        
+                        // 显示交易详情
+                        setTimeout(() => {
+                            this.showTransactionDetail(txid);
+                        }, 1000);
+                    } else {
+                        throw new Error('交易发送失败');
+                    }
+                } catch (error) {
+                    console.error('交易失败:', error);
+                    
+                    if (error.code === 4001) {
+                        this.showNotification('用户取消了交易', 'warning');
+                    } else if (error.message.includes('insufficient')) {
+                        this.showNotification('余额不足', 'error');
+                    } else if (error.message.includes('rejected')) {
+                        this.showNotification('用户拒绝了交易', 'warning');
+                    } else if (error.message.includes('timeout')) {
+                        this.showNotification('交易超时，请重试', 'warning');
+                    } else {
+                        this.showNotification(`交易失败: ${error.message}`, 'error');
+                    }
+                }
+            }
+            
+            stringToHex(str) {
+                let hex = '';
+                for (let i = 0; i < str.length; i++) {
+                    hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+                }
+                return hex;
+            }
+            
+            addTransaction(tx) {
+                this.transactions.unshift(tx);
+                this.updateTransactionHistory();
+                this.saveToLocalStorage();
+            }
+            
+            updateTransactionHistory() {
+                const container = document.getElementById('transactionHistory');
+                
+                if (this.transactions.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            <i class="fas fa-exchange-alt" style="font-size: 40px; margin-bottom: 10px; opacity: 0.3;"></i>
+                            <p>暂无交易记录</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                this.transactions.slice(0, 5).forEach(tx => {
+                    const time = new Date(tx.timestamp).toLocaleTimeString('zh-CN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
                     });
-                    address = accounts[0];
-                } catch (e) {
-                    log(`🔄 兼容模式：${e.message}，直接获取地址`);
-                    address = tronWeb.defaultAddress.base58 || tronWeb.defaultAddress.hex;
-                }
-
-                if (!address) {
-                    log("❌ 无法获取钱包地址，请登录波宝Pro");
-                    alert("请先登录波宝Pro钱包！");
-                    return;
-                }
-
-                // 校验Nile测试网
-                const chainId = String(await tronWeb.trx.getChainId());
-                if (chainId !== NILE_CHAIN_ID) {
-                    log(`❌ 当前网络不是Nile测试网（链ID：${chainId}）`);
-                    alert("请切换到Nile测试网！");
-                    return;
-                }
-
-                address = tronWeb.address.fromHex(address);
-                log(`✅ 连接成功！地址：${address}`);
-                document.getElementById("transferBtn").style.display = "block";
-
-            } catch (e) {
-                log(`❌ 连接失败：${e.message}`);
-                alert(`连接失败：${e.message}`);
+                    const shortTxid = tx.txid ? `${tx.txid.substring(0, 8)}...${tx.txid.substring(tx.txid.length - 6)}` : '未知';
+                    
+                    html += `
+                        <div class="transaction-details" style="margin-top: 10px;">
+                            <div class="detail-item">
+                                <span class="detail-label">收款地址</span>
+                                <span class="detail-value">${tx.to.substring(0, 8)}...</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">金额</span>
+                                <span class="detail-value" style="color: var(--success-color);">-${tx.amount} TRX</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">时间</span>
+                                <span class="detail-value">${time}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">交易ID</span>
+                                <span class="detail-value" style="font-size: 12px;">${shortTxid}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
             }
-        }
-
-        // ========== 转账1 TRX（兼容波宝Pro） ==========
-        async function transfer1TRX() {
-            if (!tronWeb) {
-                log("❌ 钱包未就绪");
-                alert("钱包未连接！");
-                return;
-            }
-
-            try {
-                const amountInSun = tronWeb.toSun(TRANSFER_AMOUNT);
-                log(`📤 转账1 TRX到 ${TARGET_ADDRESS}`);
-                log("🔄 等待波宝Pro确认付款...");
-
-                // 波宝Pro兼容的转账调用
-                const transaction = await tronWeb.trx.sendTransaction(
-                    TARGET_ADDRESS,
-                    amountInSun
+            
+            showTransactionDetail(txid) {
+                if (!txid) return;
+                
+                const explorerUrl = `https://nile.tronscan.org/#/transaction/${txid}`;
+                
+                this.showNotification(
+                    `交易已发送! <a href="${explorerUrl}" target="_blank" style="color: white; text-decoration: underline;">点击查看详情</a>`, 
+                    'success', 
+                    5000
                 );
-
-                log(`✅ 转账成功！交易哈希：${transaction.txid}`);
-                log(`🔍 查看：https://nile.tronscan.org/#/transaction/${transaction.txid}`);
-                alert(`转账成功！\n交易哈希：${transaction.txid}`);
-
-            } catch (e) {
-                log(`❌ 转账失败：${e.message}`);
-                alert(`转账失败：${e.message}`);
+            }
+            
+            openTronLink() {
+                // iOS TronLink Deep Link
+                const currentUrl = encodeURIComponent(window.location.href);
+                const deepLink = `tronlinkoutside://pull.activity?param=${currentUrl}`;
+                
+                this.showNotification('正在尝试唤起 TronLink...', 'info');
+                
+                // 尝试打开 TronLink
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                
+                // 备用方案：打开 App Store
+                setTimeout(() => {
+                    if (!this.provider) {
+                        this.showNotification('唤起失败，请手动打开 TronLink', 'warning');
+                        window.location.href = 'https://apps.apple.com/app/tronlink-wallet/id1448019511';
+                    }
+                }, 2000);
+                
+                // 移除 iframe
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }
+            
+            updateUI() {
+                if (this.isConnected && this.address) {
+                    const shortAddress = `${this.address.substring(0, 8)}...${this.address.substring(this.address.length - 6)}`;
+                    
+                    document.getElementById('connectionStatus').textContent = '已连接';
+                    document.getElementById('connectionStatus').className = 'status-badge status-connected';
+                    document.getElementById('walletAddress').textContent = this.address;
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('disconnectBtn').style.display = 'block';
+                    document.getElementById('transferBtn').disabled = false;
+                    document.getElementById('installGuide').style.display = 'none';
+                }
+            }
+            
+            showNotification(message, type = 'info', duration = 3000) {
+                const notification = document.getElementById('notification');
+                const messageEl = document.getElementById('notificationMessage');
+                const iconEl = document.getElementById('notificationIcon');
+                
+                // 设置图标
+                const icons = {
+                    'success': 'fas fa-check-circle',
+                    'error': 'fas fa-exclamation-circle',
+                    'warning': 'fas fa-exclamation-triangle',
+                    'info': 'fas fa-info-circle'
+                };
+                
+                iconEl.className = icons[type] + ' notification-icon';
+                messageEl.innerHTML = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+                
+                // 自动关闭
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, duration);
+            }
+            
+            saveToLocalStorage() {
+                if (this.address) {
+                    localStorage.setItem('tron_address', this.address);
+                }
+                if (this.transactions.length > 0) {
+                    localStorage.setItem('tron_transactions', JSON.stringify(this.transactions));
+                }
+            }
+            
+            loadFromLocalStorage() {
+                const address = localStorage.getItem('tron_address');
+                const transactions = localStorage.getItem('tron_transactions');
+                
+                if (address) this.address = address;
+                if (transactions) {
+                    try {
+                        this.transactions = JSON.parse(transactions);
+                        this.updateTransactionHistory();
+                    } catch (e) {
+                        console.error('加载交易记录失败:', e);
+                    }
+                }
             }
         }
-
-        // ========== 页面初始化（自动连接） ==========
-        window.onload = function() {
-            log(`📱 DApp地址：${DAPP_URL}`);
-            // 页面加载后自动连接钱包（波宝Pro无需手动点击）
-            setTimeout(connectWallet, 500);
-        };
+        
+        // 初始化应用
+        let tronDApp;
+        
+        window.addEventListener('load', () => {
+            tronDApp = new TronLinkIOSDApp();
+            
+            // iOS 返回按钮处理
+            window.addEventListener('pageshow', () => {
+                tronDApp.checkTronLink();
+            });
+            
+            // 防止 iOS 缩放
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // 防止双击缩放
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+        });
+        
+        // 全局错误处理
+        window.addEventListener('error', function(event) {
+            console.error('全局错误:', event.error);
+        });
+        
+        // 防止 iOS 橡皮筋效果
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 防止 iOS 长按选择
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
     </script>
 </body>
 </html>
