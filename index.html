@@ -2,26 +2,111 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>TronLink 转账</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>打开 DApp</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 20px;
+      background: #f5f5f7;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      max-width: 500px;
+      margin: 40px auto;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #ffcc00;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .qr {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    .qr img {
+      width: 150px;
+      height: 150px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+    }
+  </style>
 </head>
-<body style="padding:20px; font-family:sans-serif;">
-  <h2>💰 TronLink 转账测试</h2>
+<body>
+  <div class="card">
+    <h2>🚀 打开 DApp</h2>
+    <p>请在 TronLink App 中打开本页面以使用完整功能。</p>
+
+    <!-- 动态显示当前页面 URL -->
+    <div class="qr" id="urlBox"></div>
+
+    <button class="btn" onclick="copyUrl()">📋 复制链接</button>
+    <button class="btn" style="background:#3498db;color:white;" onclick="openInTronLink()">
+      🔗 尝试唤起 TronLink
+    </button>
+  </div>
 
   <script>
-    if (window.tronWeb) {
-      document.write(`
-        <p>✅ 检测到 TronLink，<a href="tronlink://transfer?token=trx">点击此处进入转账</a></p>
-      `);
-    } else {
-      document.write(`
-        <p>📱 请在 TronLink App 内打开本页面</p>
-        <p>操作步骤：</p>
-        <ol>
-          <li>打开 TronLink</li>
-          <li>点击「浏览器」</li>
-          <li>输入本页面 HTTPS 链接</li>
-        </ol>
-      `);
+    // 获取当前页面的完整 HTTPS 链接
+    const currentUrl = window.location.href;
+
+    // 显示二维码（可选）
+    document.getElementById('urlBox').innerHTML = `
+      <p>1. 打开 TronLink App<br>
+         2. 点击底部「浏览器」图标<br>
+         3. 粘贴以下链接：</p>
+      <div style="word-break:break-all;background:#f0f0f0;padding:8px;border-radius:6px;">
+        ${currentUrl}
+      </div>
+    `;
+
+    // 复制链接
+    function copyUrl() {
+      navigator.clipboard.writeText(currentUrl).then(() => {
+        alert('链接已复制！\n请打开 TronLink → 浏览器 → 粘贴');
+      });
+    }
+
+    // 尝试唤起 TronLink（仅用于打开 App，不保证跳转）
+    function openInTronLink() {
+      // 构造通用 TronLink 唤起链接（仅打开 App 首页）
+      const tronLinkUrl = 'tronlink://';
+
+      // 创建隐藏 iframe 尝试唤起
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = tronLinkUrl;
+      document.body.appendChild(iframe);
+
+      // 同时尝试 location（部分系统需要）
+      setTimeout(() => {
+        window.location.href = tronLinkUrl;
+      }, 100);
+
+      // 清理
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+
+      // 提示用户
+      setTimeout(() => {
+        if (!document.hidden) {
+          alert('如果未跳转，请手动打开 TronLink App\n然后在其浏览器中粘贴链接');
+        }
+      }, 1500);
     }
   </script>
 </body>
