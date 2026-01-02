@@ -1,52 +1,142 @@
-<!-- https://yourname.github.io/dapp/connect.html -->
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>连接 TronLink</title>
+    <meta charset="UTF-8">
+    <title>TronLink Nile测试网转账TRX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        button{padding: 10px 20px;font-size: 16px;margin: 10px 0;cursor: pointer;background: #2196F3;color: #fff;border: none;border-radius: 6px;}
+        button:disabled{background: #ccc;cursor: not-allowed;}
+        #msg{margin-top: 20px;padding: 10px;border-radius: 6px;font-size: 14px;}
+        .success{color: #198754;background: #d1e7dd;}
+        .error{color: #dc3545;background: #f8d7da;}
+        .info{color: #0d6efd;background: #cfe2ff;}
+    </style>
 </head>
-<body style="padding:20px; font-family:sans-serif;">
-  <h2>🔐 连接钱包</h2>
-  <button id="connectBtn" onclick="connect()">🔌 连接 TronLink</button>
-  <div id="status" style="margin-top:15px;"></div>
+<body>
+    <h3>波场Nile测试网 | 转账10 TRX到指定地址</h3>
+    <p>收款地址：<strong>TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3</strong></p>
+    <button id="connectBtn" onclick="connectTronLink()">连接TronLink钱包</button>
+    <button id="transferBtn" onclick="transferTRX()" disabled>转账10 TRX（测试币）</button>
+    <div id="msg" class="info">请先连接TronLink钱包，确保切换至 Nile 测试网</div>
 
-  <script>
-    async function connect() {
-      const status = document.getElementById('status');
-      
-      // 1. 先检查是否已在 TronLink 浏览器中
-      if (typeof window.tronWeb !== 'undefined') {
-        try {
-          const address = await window.tronWeb.defaultAddress.base58;
-          status.innerHTML = `✅ 已连接：<br>${address}`;
-          return;
-        } catch (e) {
-          status.innerText = '❌ 获取地址失败';
+    <script>
+        // ===================== 核心配置项 =====================
+        // 目标收款地址（固定）
+        const TO_ADDRESS = 'TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3';
+        // 转账数量 10 TRX
+        const TRX_AMOUNT = 10;
+        // Nile测试网 官方节点（必须用测试网节点）
+        const NILE_NODE_URL = 'https://nile.trongrid.io';
+        // TRX精度：1TRX = 10^6 SUN，转账必须用SUN为单位
+        const SUN_RATIO = 1000000;
+
+        // 全局TronWeb实例
+        let tronWeb = null;
+        // 钱包地址
+        let userAddress = '';
+
+        // ===================== 1. 检测+连接TronLink钱包 =====================
+        async function connectTronLink() {
+            const msgDom = document.getElementById('msg');
+            try {
+                // 检测TronLink是否安装
+                if (!window.tronWeb) {
+                    msgDom.className = 'error';
+                    msgDom.innerText = '❌ 未检测到TronLink钱包，请先安装TronLink插件/APP！';
+                    return false;
+                }
+
+                // 唤起TronLink授权连接钱包
+                const res = await window.tronLink.request({ method: 'tron_requestAccounts' });
+                if (!res || res.length === 0) {
+                    msgDom.className = 'error';
+                    msgDom.innerText = '❌ 您拒绝了钱包授权连接！';
+                    return false;
+                }
+
+                // 实例化TronWeb，强制指向NILE测试网（关键！防止用户切到主网）
+                tronWeb = new window.tronWeb(NILE_NODE_URL, NILE_NODE_URL, NILE_NODE_URL);
+                // 获取当前钱包地址
+                userAddress = tronWeb.defaultAddress.base58;
+
+                // 校验当前网络是否为Nile测试网（核心校验，必加）
+                const chainId = await tronWeb.trx.getChainId();
+                // Nile测试网的chainId = 1; 主网chainId = 0; Shasta测试网chainId=2
+                if (chainId !== 1) {
+                    msgDom.className = 'error';
+                    msgDom.innerText = `❌ 请切换至【Nile测试网】再操作！当前网络chainId: ${chainId}`;
+                    userAddress = '';
+                    return false;
+                }
+
+                // 连接成功
+                msgDom.className = 'success';
+                msgDom.innerText = `✅ 钱包连接成功！当前地址：${userAddress} | 网络：Nile测试网`;
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('transferBtn').disabled = false;
+
+            } catch (error) {
+                msgDom.className = 'error';
+                msgDom.innerText = `❌ 连接失败：${error.message || '用户取消授权'}`;
+            }
         }
-      }
 
-      // 2. 如果在外部浏览器，尝试唤起 TronLink
-      status.innerText = '正在唤起 TronLink...';
+        // ===================== 2. 核心转账逻辑 =====================
+        async function transferTRX() {
+            const msgDom = document.getElementById('msg');
+            const transferBtn = document.getElementById('transferBtn');
+            try {
+                // 前置校验
+                if (!tronWeb || !userAddress) {
+                    msgDom.className = 'error';
+                    msgDom.innerText = '❌ 请先连接钱包！';
+                    return false;
+                }
+                transferBtn.disabled = true;
+                msgDom.className = 'info';
+                msgDom.innerText = '🔄 正在发起转账请求，唤起TronLink签名授权中...';
 
-      // 构造官方推荐的连接链接（关键！）
-      const dappUrl = encodeURIComponent(window.location.href);
-      const tronLinkConnectUrl = `https://tronscan.org/tronlink/connect?dappUrl=${dappUrl}`;
+                // 核心：转账核心方法 - trx.sendTransaction
+                // 注意：TRX转账必须传 SUN 单位！10 TRX = 10 * 1000000 SUN
+                const amountInSun = TRX_AMOUNT * SUN_RATIO;
+                const transactionObj = await tronWeb.trx.sendTransaction(
+                    TO_ADDRESS,  // 收款地址
+                    amountInSun  // 转账金额（SUN单位）
+                );
 
-      // 方式 A：直接跳转到 Tronscan 中转页（最可靠）
-      window.location.href = tronLinkConnectUrl;
+                // ✅ 签名授权成功，返回交易对象，包含交易哈希
+                if (transactionObj && transactionObj.result && transactionObj.txid) {
+                    const txHash = transactionObj.txid;
+                    msgDom.className = 'success';
+                    msgDom.innerText = `✅ 转账签名成功！交易哈希：${txHash}\n💡 交易已广播，等待区块确认，可去Nile区块浏览器查询`;
+                    // 可选：跳转区块浏览器查看交易详情
+                    console.log('交易哈希：', txHash);
+                    console.log('区块浏览器地址：', `https://nile.tronscan.org/#/transaction/${txHash}`);
+                    return true;
+                } else {
+                    throw new Error('转账交易发起失败，未获取到交易哈希');
+                }
 
-      // 方式 B（备用）：尝试深度链接（部分设备有效）
-      /*
-      const deepLink = `tronlink://connect?dappUrl=${dappUrl}`;
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = deepLink;
-      document.body.appendChild(iframe);
-      setTimeout(() => window.location.href = deepLink, 300);
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-      */
-    }
-  </script>
+            } catch (error) {
+                transferBtn.disabled = false;
+                msgDom.className = 'error';
+                const errMsg = error.message || '转账失败';
+                // 常见错误文案优化
+                const tip = errMsg.includes('User denied') ? '❌ 您拒绝了转账签名授权' : 
+                            errMsg.includes('insufficient balance') ? '❌ 钱包TRX测试币余额不足，请先领取测试币' : 
+                            `❌ 转账失败：${errMsg}`;
+                msgDom.innerText = tip;
+            }
+        }
+
+        // 页面加载时检测钱包是否已连接
+        window.onload = async () => {
+            if (window.tronWeb && window.tronWeb.ready) {
+                document.getElementById('msg').innerText = 'ℹ️ 检测到已连接的TronLink钱包，点击转账即可';
+                await connectTronLink();
+            }
+        }
+    </script>
 </body>
 </html>
