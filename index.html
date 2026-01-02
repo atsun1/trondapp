@@ -1,244 +1,64 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>唤起TronLink转账1TRX（Nile测试网）</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        .container { max-width: 500px; margin: 30px auto; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
-        h2 { text-align: center; margin-bottom: 20px; color: #333; }
-        .btn {
-            width: 100%;
-            padding: 16px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 6px;
-            font-size: 18px;
-            cursor: pointer;
-            color: white;
-        }
-        .call-btn { background: #007bff; }
-        .transfer-btn { background: #28a745; display: none; }
-        .manual-btn { background: #dc3545; }
-        .tip {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .warn-tip { background: #f8d7da; color: #721c24; }
-        .info-tip { background: #d1ecf1; color: #0c5460; }
-        #log {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #eee;
-            min-height: 200px;
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-            overflow-y: auto;
-        }
-        #manual-guide { display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 6px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>转账1 TRX到指定地址（Nile测试网）</h2>
+// ========== 检查是否在TronLink/波宝Pro环境（修复版本检测） ==========
+function checkTronLinkEnv() {
+    if (!window.tronWeb) {
+        log("❌ 未检测到TronLink/波宝Pro环境！请在钱包内置浏览器打开");
+        alert("请在TronLink/波宝Pro内置DApp浏览器中访问！");
+        return false;
+    }
+    // 修复：不再检测request方法，改为检测核心的trx方法（波宝Pro支持）
+    if (!window.tronWeb.trx || !window.tronWeb.trx.sendTransaction) {
+        log("⚠️ 检测到非标准TronLink环境（波宝Pro），尝试兼容模式");
+        alert("检测到波宝Pro环境，将使用兼容模式运行！");
+    }
+    log("✅ 检测到TronLink/波宝Pro内置浏览器环境");
+    return true;
+}
+
+// ========== 连接钱包（适配波宝Pro，移除request方法依赖） ==========
+async function connectWallet() {
+    if (!checkTronLinkEnv()) return;
+
+    try {
+        tronWeb = window.tronWeb;
         
-        <div class="info-tip">
-            🎯 目标地址：<br>
-            <code>TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3</code>
-        </div>
-
-        <!-- 唤起钱包按钮 -->
-        <button class="btn call-btn" onclick="callTronLink()">唤起TronLink钱包</button>
-        <!-- 手动访问指引按钮 -->
-        <button class="btn manual-btn" onclick="toggleManualGuide()">手动访问指引（唤起失败时用）</button>
-        <!-- 转账按钮（连接钱包后显示） -->
-        <button class="btn transfer-btn" id="transferBtn" onclick="transfer1TRX()">发起1 TRX转账</button>
-
-        <!-- 手动访问指引 -->
-        <div id="manual-guide" class="warn-tip">
-            <h4>📝 手动访问步骤（必看）</h4>
-            <ol>
-                <li>打开TronLink → 切换到「Nile测试网」→ 确保有测试TRX（水龙头领取）；</li>
-                <li>进入TronLink底部「发现」→「DApp浏览器」；</li>
-                <li>输入DApp地址：<span id="dapp-url">http://192.168.1.100:8080/tron-transfer-1trx.html</span>；</li>
-                <li>访问后点击「连接钱包」→ 发起转账。</li>
-            </ol>
-        </div>
-
-        <!-- 调试日志区 -->
-        <div id="log">[系统] 页面加载完成，准备唤起TronLink...</div>
-    </div>
-
-    <script>
-        // ========== 核心配置（必须修改） ==========
-        const LOCAL_IP = "192.168.1.100"; // 替换为你的电脑局域网IP
-        const LOCAL_PORT = 8080;
-        const DAPP_URL = `http://${LOCAL_IP}:${LOCAL_PORT}/tron-transfer-1trx.html`;
-        const TARGET_ADDRESS = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3"; // 目标转账地址
-        const TRANSFER_AMOUNT = 1; // 转账1 TRX
-        const NILE_CHAIN_ID = "4"; // Nile测试网链ID
-
-        let tronWeb = null;
-        document.getElementById("dapp-url").textContent = DAPP_URL;
-
-        // ========== 工具函数：可视化日志（关键调试） ==========
-        function log(msg) {
-            const logEl = document.getElementById("log");
-            const time = new Date().toLocaleTimeString();
-            const logMsg = `[${time}] ${msg}`;
-            // 页面显示日志
-            logEl.innerHTML += logMsg + "\n";
-            logEl.scrollTop = logEl.scrollHeight;
-            // 控制台输出
-            console.log(logMsg);
-            // 关键报错弹框提醒
-            if (msg.includes("❌") || msg.includes("Error") || msg.includes("Failed")) {
-                alert(`【报错】${msg}`);
-            }
+        // 修复：波宝Pro无需调用tron_requestAccounts，直接获取地址（自动授权）
+        let address = null;
+        try {
+            // 先尝试新版API
+            const accounts = await tronWeb.request({ 
+                method: 'tron_requestAccounts',
+                params: [] 
+            });
+            address = accounts[0];
+        } catch (e) {
+            // 波宝Pro兼容：直接获取默认地址（无需显式授权）
+            log("🔄 波宝Pro兼容模式：直接获取钱包地址");
+            address = tronWeb.defaultAddress.base58;
+            if (!address) address = tronWeb.defaultAddress.hex;
         }
 
-        // 显示/隐藏手动指引
-        function toggleManualGuide() {
-            const guide = document.getElementById("manual-guide");
-            guide.style.display = guide.style.display === "none" ? "block" : "none";
+        if (!address) {
+            log("❌ 无法获取钱包地址，请确认钱包已登录");
+            alert("无法获取钱包地址，请登录波宝Pro！");
+            return;
         }
 
-        // ========== 核心1：唤起TronLink（多协议兼容） ==========
-        function callTronLink() {
-            log("===== 开始唤起TronLink =====");
-            // 检测是否已在TronLink内置浏览器
-            if (window.tronWeb) {
-                log("✅ 已在TronLink内置浏览器，无需唤起，直接连接钱包");
-                connectWallet();
-                return;
-            }
-
-            // 多协议兼容（解决雷电模拟器唤起失败）
-            const deepLink1 = `tronlink://dapp?url=${encodeURIComponent(DAPP_URL)}`; // 旧协议
-            const deepLink2 = `tron://open?type=dapp&url=${encodeURIComponent(DAPP_URL)}`; // 新协议
-
-            try {
-                log(`🔄 尝试新协议唤起：${deepLink2}`);
-                window.location.href = deepLink2;
-                // 1.5秒后降级尝试旧协议
-                setTimeout(() => {
-                    if (!window.tronWeb) {
-                        log(`🔄 新协议唤起失败，尝试旧协议：${deepLink1}`);
-                        window.location.href = deepLink1;
-                    }
-                }, 1500);
-
-                log("⚠️ 若钱包未唤起，请查看「手动访问指引」，手动在TronLink中打开DApp");
-            } catch (e) {
-                log(`❌ 唤起失败：${e.message}`);
-                toggleManualGuide(); // 自动显示手动指引
-            }
+        // 校验Nile测试网
+        const chainId = String(await tronWeb.trx.getChainId());
+        if (chainId !== NILE_CHAIN_ID) {
+            log(`❌ 当前网络不是Nile测试网！当前链ID：${chainId}，需要：${NILE_CHAIN_ID}`);
+            alert("请将波宝Pro切换到Nile测试网！");
+            return;
         }
 
-        // ========== 核心2：连接钱包（适配新版TronLink） ==========
-        async function connectWallet() {
-            log("===== 开始连接钱包 =====");
-            // 检测TronLink环境
-            if (!window.tronWeb) {
-                log("❌ 未检测到TronLink环境！请按手动指引操作");
-                alert("请在TronLink内置DApp浏览器中打开此页面！");
-                toggleManualGuide();
-                return;
-            }
+        // 格式化地址
+        address = tronWeb.address.fromHex(address);
+        log(`✅ 钱包连接成功！地址：${address}`);
+        log(`✅ 当前网络：Nile测试网（链ID：${chainId}）`);
+        document.getElementById("transferBtn").style.display = "block";
 
-            try {
-                tronWeb = window.tronWeb;
-                // 校验TronLink版本
-                if (!tronWeb.request) {
-                    log("❌ TronLink版本过低，请升级到V4+");
-                    alert("请升级TronLink到最新版本！");
-                    return;
-                }
-
-                // 发起钱包授权
-                log("🔄 发起钱包授权请求...");
-                const accounts = await tronWeb.request({
-                    method: "tron_requestAccounts",
-                    params: [] // 新版必填空参数
-                });
-
-                if (!accounts || accounts.length === 0) {
-                    log("❌ 用户拒绝授权连接钱包");
-                    return;
-                }
-
-                // 校验是否为Nile测试网
-                const chainId = String(await tronWeb.trx.getChainId());
-                if (chainId !== NILE_CHAIN_ID) {
-                    log(`❌ 当前网络不是Nile测试网！当前链ID：${chainId}，需要：${NILE_CHAIN_ID}`);
-                    alert("请将TronLink切换到Nile测试网！");
-                    return;
-                }
-
-                // 验证目标地址格式
-                if (!tronWeb.address.isValid(TARGET_ADDRESS)) {
-                    log(`❌ 目标地址${TARGET_ADDRESS}格式错误`);
-                    alert("目标转账地址格式错误！");
-                    return;
-                }
-
-                // 连接成功，显示转账按钮
-                const address = tronWeb.address.fromHex(tronWeb.defaultAddress.base58);
-                log(`✅ 钱包连接成功！地址：${address}`);
-                log(`✅ 当前网络：Nile测试网（链ID：${chainId}）`);
-                document.getElementById("transferBtn").style.display = "block";
-
-            } catch (e) {
-                log(`❌ 连接钱包失败：${e.message}`);
-                alert(`连接失败：${e.message}`);
-            }
-        }
-
-        // ========== 核心3：转账1 TRX（Nile测试网） ==========
-        async function transfer1TRX() {
-            log("===== 开始转账1 TRX =====");
-            if (!tronWeb || !tronWeb.ready) {
-                log("❌ 钱包未就绪，请先连接钱包");
-                alert("钱包未连接！");
-                return;
-            }
-
-            try {
-                // 转换TRX为Sun（1 TRX = 1000000 Sun）
-                const amountInSun = tronWeb.toSun(TRANSFER_AMOUNT);
-                log(`📤 准备转账：${TRANSFER_AMOUNT} TRX（${amountInSun} Sun）→ ${TARGET_ADDRESS}`);
-                log("🔄 发起转账请求，等待用户在TronLink确认...");
-
-                // 发起转账（新版简化参数，依赖钱包默认配置）
-                const transaction = await tronWeb.trx.sendTransaction(
-                    TARGET_ADDRESS,
-                    amountInSun
-                );
-
-                // 转账成功
-                log(`✅ 转账成功！交易哈希：${transaction.txid}`);
-                log(`🔍 区块浏览器查看：https://nile.tronscan.org/#/transaction/${transaction.txid}`);
-                alert(`转账1 TRX成功！\n交易哈希：${transaction.txid}\n可在Nile区块浏览器查看`);
-
-            } catch (e) {
-                log(`❌ 转账失败：${e.message}`);
-                alert(`转账失败：${e.message}`);
-            }
-        }
-
-        // ========== 页面初始化 ==========
-        window.onload = function() {
-            log(`📱 DApp地址：${DAPP_URL}`);
-            log("💡 提示：若唤起无反应，优先使用手动访问指引");
-            // 自动检测是否已在TronLink内置浏览器
-            if (window.tronWeb) {
-                setTimeout(connectWallet, 1000);
-            }
-        };
-    </script>
-</body>
-</html>
+    } catch (e) {
+        log(`❌ 连接钱包失败：${e.message}`);
+        alert(`连接失败：${e.message}`);
+    }
+}
