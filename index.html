@@ -80,42 +80,41 @@
       btn.textContent = '⏳ 转账中...';
 
       try {
-        // 检查 tronWeb 是否存在
         if (typeof window.tronWeb === 'undefined') {
           throw new Error('未检测到 TronLink。请在 TronLink App 的浏览器中打开本页面。');
         }
 
         const tronWeb = window.tronWeb;
 
-        // 检查是否为 Nile 测试网
+        // 获取节点信息以判断网络
         const nodeInfo = await tronWeb.trx.getNodeInfo();
-        const netName = nodeInfo.configNodeInfo.netName;
-        log(`当前网络: ${netName}`);
+        const netName = nodeInfo.configNodeInfo ? nodeInfo.configNodeInfo.netName : '';
+        log('当前网络: ' + netName);
 
-        if (!netName || !netName.toLowerCase().includes('nile')) {
-          alert('⚠️ 请切换到 Nile 测试网！\n\n操作：TronLink → 钱包设置 → 网络 → 选择 "Nile"');
-          throw new Error('非 Nile 网络');
+        // 检查是否为 Nile（注意：部分版本返回 "NILE" 或 "nile"）
+        if (!netName || !/nile/i.test(netName)) {
+          alert('⚠️ 请切换到 Nile 测试网！\n\n操作：TronLink → 我的 → 设置 → 网络 → 选择 "Nile"');
+          throw new Error('当前不是 Nile 测试网');
         }
 
-        // 获取发送者地址
         const sender = tronWeb.defaultAddress.base58;
-        log(`发送者: ${sender}`);
+        log('发送者: ' + sender);
 
-        // 验证收款地址
         if (!tronWeb.isAddress(RECEIVER)) {
           throw new Error('收款地址无效');
         }
 
-        // 发送交易（单位：Sun，1 TRX = 1,000,000 Sun）
-        const amountInSun = AMOUNT * 1_000_000;
+        // ✅ 修复点：使用普通数字，不要用 1_000_000
+        const amountInSun = AMOUNT * 1000000; // 1 TRX = 1,000,000 Sun
+
         const tx = await tronWeb.trx.sendTransaction(RECEIVER, amountInSun);
 
-        log(`✅ 转账成功！TXID:\n${tx}`);
-        alert(`✅ 转账成功！\n\nTXID: ${tx}\n\n请在 Nile 浏览器查看：\nhttps://nile.tronscan.org/tx/${tx}`);
+        log('✅ 转账成功！TXID:\n' + tx);
+        alert('✅ 转账成功！\n\nTXID: ' + tx + '\n\n查看交易:\nhttps://nile.tronscan.org/tx/' + tx);
         
       } catch (error) {
-        log(`❌ 错误: ${error.message}`);
-        alert(`转账失败:\n${error.message}`);
+        log('❌ 错误: ' + (error.message || error.toString()));
+        alert('转账失败:\n' + (error.message || error.toString()));
       } finally {
         btn.disabled = false;
         btn.textContent = '🚀 转账 10 TRX';
