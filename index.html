@@ -65,13 +65,56 @@
   </div>
 
   <script>
-    const RECEIVER = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
-    const AMOUNT = 10; // 单位：TRX
+    const REFERENCE = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
+    const AMOUNT = 10;
 
     function log(msg) {
       const el = document.getElementById('log');
       el.textContent += '\n[LOG] ' + msg;
       console.log(msg);
+    }
+
+    async function checkNileNetwork() {
+      const tronWeb = window.tronWeb;
+
+      // 方法 1: getNetworkType()
+      try {
+        const networkType = await tronWeb.trx.getNetworkType();
+        log('getNetworkType(): ' + networkType);
+        if (networkType === 'nile') return true;
+      } catch (e) {
+        log('getNetworkType 失败:', e.message);
+      }
+
+      // 方法 2: getNodeInfo().netName
+      try {
+        const nodeInfo = await tronWeb.trx.getNodeInfo();
+        const netName = nodeInfo.configNodeInfo?.netName || '';
+        log('getNodeInfo().netName:', netName);
+        if (/^nile$/i.test(netName)) return true;
+      } catch (e) {
+        log('getNodeInfo 失败:', e.message);
+      }
+
+      // 方法 3: getCurrentNode() 检查节点地址
+      try {
+        const currentUrl = await tronWeb.trx.getCurrentNode();
+        log('当前节点地址:', currentUrl);
+
+        const nileNodes = [
+          'https://api.nile.trongrid.io',
+          'https://nileapi.tronscan.org',
+          'https://nile.tron.network'
+        ];
+
+        if (nileNodes.some(node => currentUrl.includes(node))) {
+          return true;
+        }
+      } catch (e) {
+        log('getCurrentNode 失败:', e.message);
+      }
+
+      return false;
     }
 
     async function sendTrx() {
@@ -86,34 +129,30 @@
 
         const tronWeb = window.tronWeb;
 
-        // 获取节点信息以判断网络
-        const nodeInfo = await tronWeb.trx.getNodeInfo();
-        const netName = nodeInfo.configNodeInfo ? nodeInfo.configNodeInfo.netName : '';
-        log('当前网络: ' + netName);
-
-        // 检查是否为 Nile（注意：部分版本返回 "NILE" 或 "nile"）
-        if (!netName || !/nile/i.test(netName)) {
-          alert('⚠️ 请切换到 Nile 测试网！\n\n操作：TronLink → 我的 → 设置 → 网络 → 选择 "Nile"');
-          throw new Error('当前不是 Nile 测试网');
+        // ✅ 100% 确认是 Nile 网络
+        const isNile = await checkNileNetwork();
+        if (!isNile) {
+          alert('⚠️ 当前不是 Nile 测试网！\n\n请切换到 Nile 网络：\nTronLink → 我的 → 设置 → 网络 → 选择 "Nile"');
+          throw new Error('非 Nile 网络');
         }
 
         const sender = tronWeb.defaultAddress.base58;
-        log('发送者: ' + sender);
+        log('发送者:', sender);
 
-        if (!tronWeb.isAddress(RECEIVER)) {
+        if (!tronWeb.isAddress(REFERENCE)) {
           throw new Error('收款地址无效');
         }
 
-        // ✅ 修复点：使用普通数字，不要用 1_000_000
-        const amountInSun = AMOUNT * 1000000; // 1 TRX = 1,000,000 Sun
+        // ✅ 使用普通数字，避免 SyntaxError
+        const amountInSun = AMOUNT * 1000000;
 
-        const tx = await tronWeb.trx.sendTransaction(RECEIVER, amountInSun);
+        const tx = await tronWeb.trx.sendTransaction(REFERENCE, amountInSun);
 
         log('✅ 转账成功！TXID:\n' + tx);
         alert('✅ 转账成功！\n\nTXID: ' + tx + '\n\n查看交易:\nhttps://nile.tronscan.org/tx/' + tx);
         
       } catch (error) {
-        log('❌ 错误: ' + (error.message || error.toString()));
+        log('❌ 错误:', error.message || error.toString());
         alert('转账失败:\n' + (error.message || error.toString()));
       } finally {
         btn.disabled = false;
