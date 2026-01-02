@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>打开 DApp</title>
+  <title>向 TENBpGL... 转账 10 TRX</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -31,82 +31,64 @@
       cursor: pointer;
       margin-top: 20px;
     }
-    .qr {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 14px;
-      color: #666;
-    }
-    .qr img {
-      width: 150px;
-      height: 150px;
-      border: 1px solid #eee;
+    .info {
+      background: #e8f4ff;
+      padding: 12px;
       border-radius: 8px;
+      margin-top: 15px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>🚀 打开 DApp</h2>
-    <p>请在 TronLink App 中打开本页面以使用完整功能。</p>
+    <h2>💸 快速转账</h2>
+    <p>点击下方按钮，向指定地址转账 10 TRX：</p>
+    
+    <div class="info">
+      <strong>收款地址：</strong><br>
+      <code>TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3</code><br>
+      <strong>金额：</strong>10 TRX
+    </div>
 
-    <!-- 动态显示当前页面 URL -->
-    <div class="qr" id="urlBox"></div>
-
-    <button class="btn" onclick="copyUrl()">📋 复制链接</button>
-    <button class="btn" style="background:#3498db;color:white;" onclick="openInTronLink()">
-      🔗 尝试唤起 TronLink
+    <button class="btn" onclick="openTransfer()">
+      🚀 在 TronLink 中转账
     </button>
+
+    <div style="margin-top: 20px; font-size:12px; color:#666;">
+      * 需要已安装 TronLink App
+    </div>
   </div>
 
   <script>
-    // 获取当前页面的完整 HTTPS 链接
-    const currentUrl = window.location.href;
+    function openTransfer() {
+      // 预填的收款地址和金额
+      const to = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
+      const amount = "10"; // 注意：必须是字符串，且不能有逗号
 
-    // 显示二维码（可选）
-    document.getElementById('urlBox').innerHTML = `
-      <p>1. 打开 TronLink App<br>
-         2. 点击底部「浏览器」图标<br>
-         3. 粘贴以下链接：</p>
-      <div style="word-break:break-all;background:#f0f0f0;padding:8px;border-radius:6px;">
-        ${currentUrl}
-      </div>
-    `;
+      // 构造 TronLink 转账深度链接
+      const transferUrl = `tronlink://transfer?to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}&token=trx`;
 
-    // 复制链接
-    function copyUrl() {
-      navigator.clipboard.writeText(currentUrl).then(() => {
-        alert('链接已复制！\n请打开 TronLink → 浏览器 → 粘贴');
-      });
-    }
-
-    // 尝试唤起 TronLink（仅用于打开 App，不保证跳转）
-    function openInTronLink() {
-      // 构造通用 TronLink 唤起链接（仅打开 App 首页）
-      const tronLinkUrl = 'tronlink://';
-
-      // 创建隐藏 iframe 尝试唤起
+      // 尝试唤起（双保险）
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
-      iframe.src = tronLinkUrl;
+      iframe.src = transferUrl;
       document.body.appendChild(iframe);
 
-      // 同时尝试 location（部分系统需要）
       setTimeout(() => {
-        window.location.href = tronLinkUrl;
+        window.location.href = transferUrl;
       }, 100);
 
-      // 清理
       setTimeout(() => {
         document.body.removeChild(iframe);
       }, 1000);
 
-      // 提示用户
+      // Fallback 提示
       setTimeout(() => {
         if (!document.hidden) {
-          alert('如果未跳转，请手动打开 TronLink App\n然后在其浏览器中粘贴链接');
+          alert("未检测到 TronLink！\n\n请确保：\n• 已安装最新版 TronLink\n• 在手机上打开此页面");
         }
-      }, 1500);
+      }, 2000);
     }
   </script>
 </body>
