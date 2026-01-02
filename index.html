@@ -1,94 +1,51 @@
+<!-- https://yourname.github.io/dapp/connect.html -->
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>向 TENBpGL... 转账 10 TRX</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      padding: 20px;
-      background: #f5f5f7;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      max-width: 500px;
-      margin: 40px auto;
-    }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      background: #ffcc00;
-      color: black;
-      font-weight: bold;
-      font-size: 18px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    .info {
-      background: #e8f4ff;
-      padding: 12px;
-      border-radius: 8px;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-  </style>
+  <title>连接 TronLink</title>
 </head>
-<body>
-  <div class="card">
-    <h2>💸 快速转账</h2>
-    <p>点击下方按钮，向指定地址转账 10 TRX：</p>
-    
-    <div class="info">
-      <strong>收款地址：</strong><br>
-      <code>TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3</code><br>
-      <strong>金额：</strong>10 TRX
-    </div>
-
-    <button class="btn" onclick="openTransfer()">
-      🚀 在 TronLink 中转账
-    </button>
-
-    <div style="margin-top: 20px; font-size:12px; color:#666;">
-      * 需要已安装 TronLink App
-    </div>
-  </div>
+<body style="padding:20px; font-family:sans-serif;">
+  <h2>🔐 连接钱包</h2>
+  <button id="connectBtn" onclick="connect()">🔌 连接 TronLink</button>
+  <div id="status" style="margin-top:15px;"></div>
 
   <script>
-    function openTransfer() {
-      // 预填的收款地址和金额
-      const to = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
-      const amount = "10"; // 注意：必须是字符串，且不能有逗号
+    async function connect() {
+      const status = document.getElementById('status');
+      
+      // 1. 先检查是否已在 TronLink 浏览器中
+      if (typeof window.tronWeb !== 'undefined') {
+        try {
+          const address = await window.tronWeb.defaultAddress.base58;
+          status.innerHTML = `✅ 已连接：<br>${address}`;
+          return;
+        } catch (e) {
+          status.innerText = '❌ 获取地址失败';
+        }
+      }
 
-      // 构造 TronLink 转账深度链接
-      const transferUrl = `tronlink://transfer?to=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}&token=trx`;
+      // 2. 如果在外部浏览器，尝试唤起 TronLink
+      status.innerText = '正在唤起 TronLink...';
 
-      // 尝试唤起（双保险）
+      // 构造官方推荐的连接链接（关键！）
+      const dappUrl = encodeURIComponent(window.location.href);
+      const tronLinkConnectUrl = `https://tronscan.org/tronlink/connect?dappUrl=${dappUrl}`;
+
+      // 方式 A：直接跳转到 Tronscan 中转页（最可靠）
+      window.location.href = tronLinkConnectUrl;
+
+      // 方式 B（备用）：尝试深度链接（部分设备有效）
+      /*
+      const deepLink = `tronlink://connect?dappUrl=${dappUrl}`;
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
-      iframe.src = transferUrl;
+      iframe.src = deepLink;
       document.body.appendChild(iframe);
-
-      setTimeout(() => {
-        window.location.href = transferUrl;
-      }, 100);
-
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-
-      // Fallback 提示
-      setTimeout(() => {
-        if (!document.hidden) {
-          alert("未检测到 TronLink！\n\n请确保：\n• 已安装最新版 TronLink\n• 在手机上打开此页面");
-        }
-      }, 2000);
+      setTimeout(() => window.location.href = deepLink, 300);
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+      */
     }
   </script>
 </body>
