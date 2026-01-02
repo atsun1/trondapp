@@ -2,126 +2,200 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>TRON钱包跳转访问DApp示例</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安卓模拟器TRON钱包交互示例</title>
     <style>
         .container {
             max-width: 600px;
-            margin: 50px auto;
+            margin: 20px auto;
             padding: 20px;
             border: 1px solid #eee;
             border-radius: 8px;
         }
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin: 10px 0;
+            margin: 10px 5px;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:nth-child(2) {
+            background: #28a745;
+        }
+        button:nth-child(3) {
+            background: #ffc107;
+            color: #333;
         }
         button:disabled {
             background: #6c757d;
             cursor: not-allowed;
         }
+        #walletInfo, #transferArea {
+            margin-top: 20px;
+            padding: 15px;
+            border-top: 1px dashed #eee;
+            display: none;
+        }
         #log {
             margin-top: 20px;
             padding: 10px;
             border: 1px solid #eee;
-            min-height: 100px;
+            min-height: 150px;
             font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .tip {
+            color: #666;
+            font-size: 12px;
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>TRON钱包DApp交互示例</h2>
-        <button id="connectWallet" onclick="connectTronWallet()">连接TronLink钱包</button>
-        <div id="walletInfo" style="display: none;">
-            <p>当前账户地址：<span id="address"></span></p>
-            <p>TRX余额：<span id="trxBalance"></span> TRX</p>
-            <hr>
-            <h4>TRC20代币转账（以USDT为例）</h4>
+        <h2>TRON钱包DApp交互（安卓模拟器版）</h2>
+        <p class="tip">提示：请确保模拟器与电脑在同一局域网，且已安装TRON钱包（TronLink/TokenPocket）</p>
+        
+        <!-- 唤起钱包按钮 -->
+        <button onclick="openInTronLink()">唤起TronLink钱包打开DApp</button>
+        <button onclick="openInTokenPocket()">唤起TokenPocket钱包打开DApp</button>
+        <button onclick="checkWalletConnection()">检测钱包连接状态</button>
+
+        <!-- 钱包信息 -->
+        <div id="walletInfo">
+            <p>当前账户地址：<span id="address">--</span></p>
+            <p>TRX余额：<span id="trxBalance">--</span> TRX</p>
+        </div>
+
+        <!-- 转账区域 -->
+        <div id="transferArea">
+            <h4>TRC20代币转账（测试网USDT）</h4>
             <div>
                 <label>接收地址：</label>
-                <input type="text" id="toAddress" placeholder="输入TRON地址" value="TYM99999999999999999999999999999999999999">
+                <input type="text" id="toAddress" placeholder="输入TRON地址" value="TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs">
+                <p class="tip">测试网USDT合约地址：TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs</p>
             </div>
             <div>
                 <label>转账数量：</label>
-                <input type="number" id="amount" placeholder="输入数量" value="0.01">
+                <input type="number" id="amount" placeholder="输入数量（如0.01）" value="0.01">
             </div>
             <button onclick="transferTRC20()">发起转账</button>
         </div>
-        <div id="log"></div>
+
+        <!-- 日志区域 -->
+        <div id="log">[系统] 页面加载完成，请先唤起钱包打开此DApp</div>
     </div>
 
     <script>
-        // TRON网络配置（主网/测试网）
+        // ========== 配置项 ==========
+        // 替换为你的电脑局域网IP（如192.168.1.100），端口与本地服务器一致
+        const LOCAL_DAPP_URL = "http://192.168.1.100:8080/tron-dapp.html";
+        // TRON网络配置
         const TRON_CONFIG = {
-            // 主网
-            mainnet: {
-                fullHost: 'https://api.trongrid.io',
-                usdtContract: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' // 官方USDT合约地址
-            },
-            // 测试网
             testnet: {
                 fullHost: 'https://api.shasta.trongrid.io',
-                usdtContract: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs' // 测试网USDT合约地址
+                usdtContract: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs' // 测试网USDT合约
             }
         };
-        // 默认使用测试网（避免主网资产风险）
         const currentNetwork = TRON_CONFIG.testnet;
         let tronWeb = null;
 
-        // 日志输出函数
+        // ========== 工具函数 ==========
+        // 日志输出
         function log(message) {
             const logElement = document.getElementById('log');
             logElement.innerHTML += `[${new Date().toLocaleTimeString()}] ${message}\n`;
             logElement.scrollTop = logElement.scrollHeight;
         }
 
-        // 1. 连接TronLink钱包
-        async function connectTronWallet() {
+        // 检查是否在钱包内置浏览器中
+        function isInWalletBrowser() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return userAgent.includes('tronlink') || userAgent.includes('tokenpocket');
+        }
+
+        // ========== 唤起钱包函数 ==========
+        // 唤起TronLink钱包
+        function openInTronLink() {
+            if (isInWalletBrowser()) {
+                log("已在钱包内置浏览器中，无需重复唤起");
+                checkWalletConnection();
+                return;
+            }
+            const deepLink = `tronlink://dapp?url=${encodeURIComponent(LOCAL_DAPP_URL)}`;
+            window.location.href = deepLink;
+            log("正在唤起TronLink钱包...请在钱包中确认打开DApp");
+        }
+
+        // 唤起TokenPocket钱包
+        function openInTokenPocket() {
+            if (isInWalletBrowser()) {
+                log("已在钱包内置浏览器中，无需重复唤起");
+                checkWalletConnection();
+                return;
+            }
+            const deepLink = `tpwallet://openurl?url=${encodeURIComponent(LOCAL_DAPP_URL)}`;
+            window.location.href = deepLink;
+            log("正在唤起TokenPocket钱包...请在钱包中确认打开DApp");
+        }
+
+        // ========== 钱包交互核心函数 ==========
+        // 检测钱包连接状态
+        async function checkWalletConnection() {
             try {
-                // 检测是否安装TronLink扩展
+                // 检测是否存在tronWeb（钱包内置浏览器会自动注入）
                 if (!window.tronWeb) {
-                    log('未检测到TronLink钱包，请先安装扩展：https://www.tronlink.org/');
-                    alert('请先安装TronLink钱包扩展！');
+                    log("未检测到TRON钱包环境，请通过钱包内置浏览器打开此页面");
+                    alert("请先通过TronLink/TokenPocket钱包打开此DApp！");
                     return;
                 }
 
-                // 绑定tronWeb实例并设置网络
+                // 初始化tronWeb
                 tronWeb = window.tronWeb;
                 tronWeb.setCurrentNode(currentNetwork.fullHost);
 
-                // 请求用户授权连接
-                const accounts = await tronWeb.request({ method: 'tron_requestAccounts' });
-                if (!accounts || accounts.length === 0) {
-                    log('用户拒绝授权连接钱包');
+                // 验证钱包是否就绪
+                if (!tronWeb.ready) {
+                    log("钱包未就绪，请检查钱包是否登录并切换到测试网");
                     return;
                 }
 
+                // 获取钱包地址
                 const address = tronWeb.address.fromHex(tronWeb.defaultAddress.base58);
                 log(`钱包连接成功！地址：${address}`);
                 
-                // 显示钱包信息和转账功能
+                // 显示钱包信息
                 document.getElementById('walletInfo').style.display = 'block';
                 document.getElementById('address').textContent = address;
-                
-                // 获取TRX余额
+                document.getElementById('transferArea').style.display = 'block';
+
+                // 查询TRX余额
                 await getTRXBalance(address);
 
             } catch (error) {
-                log(`连接钱包失败：${error.message}`);
-                alert(`连接失败：${error.message}`);
+                log(`检测钱包失败：${error.message}`);
             }
         }
 
-        // 2. 获取TRX余额
+        // 查询TRX余额
         async function getTRXBalance(address) {
             try {
                 const balanceInSun = await tronWeb.trx.getBalance(address);
-                const balanceInTRX = tronWeb.fromSun(balanceInSun); // Sun转换为TRX（1 TRX = 10^6 Sun）
+                const balanceInTRX = tronWeb.fromSun(balanceInSun); // Sun转TRX
                 document.getElementById('trxBalance').textContent = balanceInTRX;
                 log(`TRX余额查询成功：${balanceInTRX} TRX`);
             } catch (error) {
@@ -129,12 +203,12 @@
             }
         }
 
-        // 3. TRC20代币转账（以USDT为例）
+        // TRC20代币转账
         async function transferTRC20() {
             try {
                 if (!tronWeb || !tronWeb.ready) {
-                    log('钱包未连接，请先点击"连接TronLink钱包"');
-                    alert('钱包未连接！');
+                    log("钱包未连接，请先检测钱包连接状态");
+                    alert("钱包未就绪！");
                     return;
                 }
 
@@ -144,34 +218,35 @@
 
                 // 参数校验
                 if (!tronWeb.address.isValid(toAddress)) {
-                    log('接收地址格式错误');
-                    alert('请输入有效的TRON地址！');
+                    log("接收地址格式错误");
+                    alert("请输入有效的TRON地址！");
                     return;
                 }
                 if (!amount || isNaN(amount) || Number(amount) <= 0) {
-                    log('转账数量错误');
-                    alert('请输入有效的转账数量！');
+                    log("转账数量错误");
+                    alert("请输入大于0的有效数量！");
                     return;
                 }
 
                 // 加载USDT合约
                 const contract = await tronWeb.contract().at(currentNetwork.usdtContract);
-                // TRC20代币小数位（USDT是6位）
+                // USDT小数位为6位，转换为最小单位
                 const decimals = 6;
                 const amountInSmallestUnit = tronWeb.toBigNumber(amount).times(10 ** decimals).toFixed(0);
 
                 log(`发起USDT转账：${amount} USDT -> ${toAddress}`);
-                log('等待用户在TronLink中确认交易...');
+                log("等待用户在钱包中确认交易...");
 
-                // 发起转账交易（调用合约transfer方法）
+                // 发起转账交易
                 const result = await contract.transfer(toAddress, amountInSmallestUnit).send({
                     from: tronWeb.defaultAddress.base58,
-                    feeLimit: 100000000 // 手续费上限（Sun）
+                    feeLimit: 100000000, // 手续费上限（Sun）
+                    callValue: 0
                 });
 
                 // 交易成功
                 log(`转账成功！交易哈希：${result.transaction}`);
-                log(`可在TRONSCAN查看：https://shasta.tronscan.org/#/transaction/${result.transaction}`);
+                log(`可在测试网TRONSCAN查看：https://shasta.tronscan.org/#/transaction/${result.transaction}`);
                 alert(`转账成功！交易哈希：${result.transaction}`);
 
             } catch (error) {
@@ -180,11 +255,11 @@
             }
         }
 
-        // 页面加载时检测已连接的钱包
+        // 页面加载时自动检测钱包
         window.onload = function() {
-            if (window.tronWeb && window.tronWeb.ready) {
-                log('检测到已连接的TronLink钱包，可直接发起操作');
-                document.getElementById('connectWallet').textContent = '重新连接钱包';
+            log(`当前环境：${isInWalletBrowser() ? "钱包内置浏览器" : "普通浏览器"}`);
+            if (isInWalletBrowser()) {
+                setTimeout(checkWalletConnection, 1000);
             }
         };
     </script>
