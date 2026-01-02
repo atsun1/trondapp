@@ -10,26 +10,19 @@
         // ========== 1. 配置转账核心参数（已适配Nile测试网） ==========
         const transferConfig = {
             // 基础协议参数（固定规范）
-            protocol: "TronLink",
-            version: "1.0",
-            chainId: "0xa869", // 关键修改：Nile测试网chainId（主网是0x2b6653dc）
-            action: "transfer",    // 操作类型：转账（固定值）
-            actionId: generateUUID(), // 唯一标识（需自定义生成）
-            
-            // 转账业务参数（替换为测试网地址）
-            memo: "Test Transfer (Nile Testnet)",  // 转账备注（标注测试网）
-            from: "TDx8EWSQKrfqB4cRncQFMjhBiJ3zwMWSZS", // 测试网付款地址（需确保是Nile测试网地址）
-            to: "TJceZJwWdyqnCh5BTXABDBJM2PRh6SMB3E",    // 测试网收款地址
-            loginAddress: "TDx8EWSQKrfqB4cRncQFMjhBiJ3zwMWSZS", // 关键修改：登录地址需和from一致（测试网）
-            tokenId: "0",           // 0=测试网TRX，代币转账填测试网tokenId
-            contract: "",           // 测试网TRX转账留空，代币填测试网合约地址
-            amount: "20",           // 转账数量（测试网TRX，无实际价值）
-            
-            // DApp相关参数（可保留或替换为测试网DApp地址）
-            url: "https://justlend.org/#/home", // 测试网DApp主页（可选替换）
-            dappIcon: "https://test/icon.png",  // DApp图标（可选）
-            dappName: "Test demo (Nile Testnet)",// 标注测试网
-            callbackUrl: "http://3.12.131.175:7777/api/tron/v1/callback" // 测试网回调地址（需后端适配）
+              protocol: "TronLink",
+              version: "1.0",
+              chainId: "42000", // 关键：十进制Nile测试网chainId
+              action: "transfer",
+              actionId: generateUUID(),
+              memo: "Test Transfer (Nile Testnet)",
+              from: "TDx8EWSQKrfqB4cRncQFMjhBiJ3zwMWSZS",
+              to: "TJceZJwWdyqnCh5BTXABDBJM2PRh6SMB3E",
+              loginAddress: "TDx8EWSQKrfqB4cRncQFMjhBiJ3zwMWSZS", // 与from一致
+              tokenId: "0",
+              contract: "",
+              amount: "20",
+              callbackUrl: "http://3.12.131.175:7777/api/tron/v1/callback"
         };
 
         // ========== 2. 工具函数：生成唯一actionId（UUID） ==========
