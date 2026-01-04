@@ -1,1 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>✅ TRON Multisig (Fixed Field Names)</title>
+</head>
+<body>
+  <button onclick="run()">测试签签</button>
+  <pre id="log" style="background:#1e1e1e;color:#00ff00;padding:10px;"></pre>
 
+  <script>
+    async function log(msg) {
+      document.getElementById('log').textContent += '[LOG] ' + msg + '\n';
+    }
+
+    async function run() {
+      if (!window.tronLink) return log('❌ 未安装 TronLink');
+
+      await window.tronLink.request({ method: 'tron_requestAccounts' });
+      const tronWeb = window.tronWeb;
+      const account = tronWeb.defaultAddress.base58;
+      const ownerHex = tronWeb.address.toHex(account).replace(/^0x/i, '').toLowerCase();
+
+      // 多签地址（替换为你自己的）
+      const multisigAddrs = [
+        "TDx8EWSQKrfqB4cRncQFMjhBiJ3zwMWSZS",
+        "TTpD5TDduA6Acfj8eQfTnG8db9QSkzj9DA"
+      ];
+      const threshold = 2;
+
+      // ✅ 构造 active 权限
+      const active = {
+        type: 2,
+        permission_name: "active",
+        threshold: threshold,
+        operations: "7fff1fc0033e0100000000000000000000000000000000000000000000000000",
+        keys: multisigAddrs.map(addr => ({
+          address: tronWeb.address.toHex(addr).replace(/^0x/i, '').toLowerCase(),
+          weight: 1
+        }))
+      };
+
+      // ✅ 构造 owner 权限（必须提供）
+      const owner = {
+        permission_name: "owner",
+        threshold: 2,
+        keys: multisigAddrs.map(addr => ({
+          address: tronWeb.address.toHex(addr).replace(/^0x/i, '').toLowerCase(),
+          weight: 1
+        }))
+      };
+
+      // ✅ 关键：字段名必须是 owner 和 actives（不是 *_permission）
+      const contract = {
+        owner_address: ownerHex,
+        owner: owner,        // ✅ 正确字段名
+        actives: [active]    // ✅ 正确字段名
+      };
+
+      log('📡 发送 AccountPermissionUpdateContract...');
+      console.log('Contract:', JSON.stringify(contract, null, 2));
+
+      try {
+        const tx = await tronWeb.fullNode.request('/wallet/accountpermissionupdate', contract, 'post');
+
+        if (tx.Error) {
+          return log('❌ 节点错误: ' + tx.Error);
+        }
+
+        log('✍️ 请求 TronLink 签名...');
+        const signed = await tronWeb.trx.sign(tx);
+
+        log('📤 广播交易...');
+        const result = await tronWeb.trx.sendRawTransaction(signed);
+
+        if (result.result) {
+          log('✅ 成功！TXID: ' + result.transaction.txID);
+          log('🔗 https://nile.tronscan.org/#/transaction/' + result.transaction.txID);
+        } else {
+          log('❌ 广播失败: ' + JSON.stringify(result));
+        }
+      } catch (e) {
+        log('💥 异常: ' + e.message);
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>
