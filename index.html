@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>USDT 授权示例 - TronLink DApp</title>
+  <title>USDT 授权 - TronLink DApp</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -49,27 +49,25 @@
     #approveBtn:hover:enabled {
       opacity: 0.9;
     }
-    .info {
+    .info, .error, .success {
       padding: 12px;
       margin: 12px 0;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+    .info {
       background: #eef8ff;
       border-left: 4px solid #007AFF;
-      border-radius: 4px;
-      font-size: 14px;
     }
     .error {
-      padding: 12px;
       background: #ffeaea;
       border-left: 4px solid #ff3b30;
       color: #d32f2f;
-      border-radius: 4px;
     }
     .success {
-      padding: 12px;
       background: #e8f5e9;
       border-left: 4px solid #34C759;
       color: #2e7d32;
-      border-radius: 4px;
     }
     .label {
       font-size: 12px;
@@ -80,7 +78,7 @@
 </head>
 <body>
   <div class="card">
-    <h2>🔐 USDT 授权</h2>
+    <h2>🔐 USDT 授权示例</h2>
     <p>授权 1000 USDT 给指定合约地址（TRC20）</p>
 
     <button id="connectBtn">🔌 连接 TronLink</button>
@@ -131,10 +129,8 @@
       }
 
       try {
-        // 请求用户账户（官方推荐方式）
         const accounts = await window.tronWeb.request({ method: 'tron_requestAccounts' });
         const address = accounts[0];
-
         accountEl.innerHTML = `<strong>账户：</strong>${address}`;
         showMessage(statusEl, '✅ 已连接 TronLink', 'success');
         document.getElementById('approveBtn').disabled = false;
@@ -145,7 +141,7 @@
     });
 
     // ========================
-    // 授权操作
+    // 授权操作（兼容所有 TronLink 版本）
     // ========================
     document.getElementById('approveBtn').addEventListener('click', async () => {
       const statusEl = document.getElementById('status');
@@ -154,13 +150,46 @@
       try {
         showMessage(statusEl, '⏳ 正在发起授权交易...', 'info');
 
-        // 获取合约实例
-        const contract = await window.tronWeb.contract().at(USDT_CONTRACT);
-        
-        // 调用 approve
-        const tx = await contract.approve(SPENDER_ADDRESS, amount).send({
-          feeLimit: 100_000_000 // 100 TRX 上限（足够覆盖）
-        });
+        // 获取当前地址
+        const ownerAddress = window.tronWeb.defaultAddress.base58;
+        if (!ownerAddress) {
+          throw new Error("无法获取账户地址");
+        }
+
+        // 方法 1：尝试使用高级 API (.send)
+        let tx;
+        try {
+          const contract = await window.tronWeb.contract().at(USDT_CONTRACT);
+          tx = await contract.approve(SPENDER_ADDRESS, amount).send({
+            feeLimit: 100_000_000,
+            shouldPollResponse: true
+          });
+        } catch (err1) {
+          console.warn("高级 API 失败，降级到底层 API", err1);
+
+          // 方法 2：降级到 triggerSmartContract + 手动签名
+          const unsignedTx = await window.tronWeb.transactionBuilder.triggerSmartContract(
+            USDT_CONTRACT,
+            'approve(address,uint256)',
+            { callValue: 0, feeLimit: 100_000_000 },
+            [
+              { type: 'address', value: SPENDER_ADDRESS },
+              { type: 'uint256', value: amount }
+            ],
+            ownerAddress
+          );
+
+          if (!unsignedTx.result || !unsignedTx.transaction) {
+            throw new Error("构建交易失败");
+          }
+
+          const signedTx = await window.tronWeb.trx.sign(unsignedTx.transaction);
+          tx = await window.tronWeb.trx.broadcast(signedTx);
+        }
+
+        if (!tx || !tx.transaction) {
+          throw new Error("交易广播失败");
+        }
 
         showMessage(statusEl, `✅ 授权成功！\n交易 ID: ${tx.transaction}`, 'success');
       } catch (err) {
@@ -168,6 +197,14 @@
         let msg = err.message || String(err);
         if (msg.includes('user denied') || msg.includes('User denied')) {
           msg = '用户取消了交易';
+        } else if (msg.includes('invalid address')) {
+          msg = '地址格式错误，请检查 SPENDER_ADDRESS 是否为 Base58 格式';
+        } else if (msg.includes('insufficient energy') || msg.includes('energy')) {
+          msg = '能量不足，请先获取能量或增加 feeLimit';
+        } else if (msg.includes('contract not exists')) {
+          msg = '合约地址无效，请检查 USDT_CONTRACT';
+        } else if (msg === '[object Object]') {
+          msg = '未知错误（可能是钱包版本过旧）';
         }
         showMessage(statusEl, `❌ 授权失败：${msg}`, 'error');
       }
